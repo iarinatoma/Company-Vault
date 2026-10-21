@@ -1,0 +1,40 @@
+<header class="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
+  <div class="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
+    <a routerLink="/" class="text-lg font-semibold tracking-tight">
+      starter<span class="text-indigo-600">.</span>
+    </a>
+
+    <nav class="flex gap-4 text-sm" aria-label="Main">
+      @if (auth.isLoggedIn()) {
+        <a
+          routerLink="/home"
+          routerLinkActive="text-indigo-600"
+          class="font-medium text-slate-600 hover:text-slate-900"
+          i18n="@@nav.home"
+        >Home</a>
+      }
+    </nav>
+
+    <div class="ml-auto flex items-center gap-3 text-sm">
+      @if (auth.user(); as u) {
+        <span class="hidden text-slate-600 sm:inline">{{ u.email }}</span>
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100"
+          (click)="logout()"
+          i18n="@@nav.logout"
+        >Sign out</button>
+      } @else {
+        <a
+          routerLink="/login"
+          class="rounded-md bg-indigo-600 px-3 py-1.5 font-medium text-white hover:bg-indigo-500"
+          i18n="@@nav.login"
+        >Sign in</a>
+      }
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-5xl px-4 py-8">
+  <router-outlet />
+</main>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Audit columns are plain and default-free on purpose: created_at/updated_at/version
+         are set by BaseEntity on the Java side — the schema stays dumb. -->
+    <changeSet id="2026-08-12-10-00-create-users" author="template">
+        <createTable tableName="users">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="varchar(320)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_users_email"/>
+            </column>
+            <column name="password_hash" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="totp_secret" type="varchar(512)"/>
+            <column name="two_factor_enabled" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failed_login_attempts" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_until" type="timestamptz"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

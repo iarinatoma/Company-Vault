@@ -1,0 +1,143 @@
+@if (user(); as u) {
+  <section class="space-y-6">
+    <header>
+      <h1 class="text-2xl font-semibold tracking-tight" i18n="@@home.title">Dashboard</h1>
+      <p class="mt-1 text-slate-600">
+        {{ u.email }}
+        <span class="ml-2 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">{{ u.role }}</span>
+      </p>
+    </header>
+
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <div class="flex items-baseline gap-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500" i18n="@@home.users">Users</h2>
+          @if (canList()) {
+            <span class="text-sm text-slate-400">{{ store.page().totalElements }}</span>
+          }
+        </div>
+        @if (canWrite()) {
+          <button
+            type="button"
+            class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+            (click)="openCreate()"
+            i18n="@@home.newUser"
+          >New user</button>
+        }
+      </div>
+
+      @if (!canList()) {
+        <p class="px-6 py-8 text-sm text-slate-500" i18n="@@home.noAccess">
+          Only administrators and managers can see the user list.
+        </p>
+      } @else if (store.loadError(); as message) {
+        <div class="px-6 py-8 text-sm text-red-700" role="alert">
+          {{ message }}
+          <button type="button" class="ml-2 font-medium underline" (click)="store.load()" i18n="@@home.retry">Try again</button>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th scope="col" class="px-6 py-3" i18n="@@home.colEmail">E-mail</th>
+                <th scope="col" class="px-6 py-3" i18n="@@home.colRole">Role</th>
+                <th scope="col" class="px-6 py-3" i18n="@@home.col2fa">2FA</th>
+                <th scope="col" class="px-6 py-3" i18n="@@home.colCreated">Created</th>
+                @if (canWrite()) {
+                  <th scope="col" class="px-6 py-3 text-right" i18n="@@home.colActions">Actions</th>
+                }
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (row of store.items(); track row.id) {
+                <tr class="hover:bg-slate-50">
+                  <td class="px-6 py-3 font-medium text-slate-900">{{ row.email }}</td>
+                  <td class="px-6 py-3">
+                    <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ row.role }}</span>
+                  </td>
+                  <td class="px-6 py-3 text-slate-600">
+                    @if (row.twoFactorEnabled) {
+                      <ng-container i18n="@@home.on">On</ng-container>
+                    } @else {
+                      <ng-container i18n="@@home.off">Off</ng-container>
+                    }
+                  </td>
+                  <td class="px-6 py-3 text-slate-600">{{ row.createdAt | date: 'medium' }}</td>
+                  @if (canWrite()) {
+                    <td class="px-6 py-3 text-right whitespace-nowrap">
+                      <button type="button" class="font-medium text-indigo-600 hover:underline" (click)="openEdit(row)" i18n="@@home.edit">Edit</button>
+                      <button
+                        type="button"
+                        class="ml-4 font-medium text-red-600 hover:underline disabled:cursor-not-allowed disabled:text-slate-300 disabled:no-underline"
+                        [disabled]="isSelf(row)"
+                        (click)="openDelete(row)"
+                        i18n="@@home.delete"
+                      >Delete</button>
+                    </td>
+                  }
+                </tr>
+              } @empty {
+                <tr>
+                  <td [attr.colspan]="canWrite() ? 5 : 4" class="px-6 py-8 text-center text-slate-500">
+                    @if (store.loading()) {
+                      <ng-container i18n="@@home.loading">Loading…</ng-container>
+                    } @else {
+                      <ng-container i18n="@@home.empty">No users found.</ng-container>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (store.page().totalPages > 1) {
+          <div class="flex items-center justify-between border-t border-slate-200 px-6 py-3 text-sm">
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="!store.hasPrevious()"
+              (click)="store.previousPage()"
+              i18n="@@home.prev"
+            >Previous</button>
+            <span class="text-slate-500">{{ store.page().number + 1 }} / {{ store.page().totalPages }}</span>
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="!store.hasNext()"
+              (click)="store.nextPage()"
+              i18n="@@home.next"
+            >Next</button>
+          </div>
+        }
+      }
+    </div>
+  </section>
+
+  @if (editing() !== null) {
+    <app-user-form
+      [user]="editTarget()"
+      [isSelf]="editTarget() !== null && isSelf(editTarget()!)"
+      [saving]="store.saving()"
+      [error]="store.saveError()"
+      (submitted)="save($event)"
+      (closed)="closeDialogs()"
+    />
+  }
+
+  @if (deleting(); as target) {
+    <app-confirm-dialog
+      [heading]="deleteHeading"
+      [confirmLabel]="deleteLabel"
+      [cancelLabel]="cancelLabel"
+      [busy]="store.saving()"
+      [error]="store.saveError()"
+      (confirmed)="confirmDelete()"
+      (closed)="closeDialogs()"
+    >
+      <ng-container i18n="@@home.deleteText">This permanently deletes the account</ng-container>
+      <strong class="ml-1">{{ target.email }}</strong>.
+    </app-confirm-dialog>
+  }
+}

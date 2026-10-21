@@ -1,0 +1,38 @@
+# Fixtures for AuthControllerIT only — datasets are per test class, never shared.
+# Every row states id/created_at/updated_at/version explicitly: BaseEntity sets those on the
+# Java side only, so there are no column defaults to fall back on. All password hashes are
+# bcrypt-12 of TestUsers.PASSWORD ("Password123!").
+# Child tables are listed (empty) so the CLEAN_INSERT seeding deletes them first and stale
+# rows from earlier classes cannot block the users delete via foreign keys.
+users:
+  - id: "aaaaaaaa-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "auth-user@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "USER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "aaaaaaaa-0000-0000-0000-000000000002"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "auth-2fa@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "USER"
+    two_factor_enabled: true
+    failed_login_attempts: 0
+  - id: "aaaaaaaa-0000-0000-0000-000000000003"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "auth-locked@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "USER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+    locked_until: "2099-01-01 00:00:00"
+refresh_tokens: []
+recovery_codes: []
+consumed_two_factor_tokens: []

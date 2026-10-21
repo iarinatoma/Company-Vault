@@ -1,0 +1,60 @@
+# testing
+coverage/
+
+
+# misc
+.DS_Store
+*.pem
+
+# claude configuration: commit settings.json, scripts/, skills/ —
+# ignore only machine-local settings
+.claude/settings.local.json
+
+# claude/superpowers scratch (session artifacts, not source)
+.superpowers/
+.worktrees/
+
+# local document storage root (app.storage.root default ./data/documents); anchored to repo root
+# so it never swallows a source directory named "data" (e.g. a feature's data/ layer)
+/data/
+
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+### Secrets / environment (never commit real values; *.example templates ARE committed) ###
+.env
+.env-test
+.env-prod
+.env.local
+!.env.example
+!.env-test.example
+!.env-prod.example
+
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### VS Code ###
+.vscode/
+
+### Terraform (state lives in the S3 backend; lock files ARE committed) ###
+**/.terraform/
+*.tfstate
+*.tfstate.*
+tfplan
+*.tfvars
+!*.tfvars.example

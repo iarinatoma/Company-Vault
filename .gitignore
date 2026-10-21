@@ -1,0 +1,19 @@
+# IDE
+.idea/
+.vscode/
+
+# Operating system
+.DS_Store
+._*
+Thumbs.db
+__MACOSX/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx

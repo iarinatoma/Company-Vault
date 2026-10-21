@@ -1,0 +1,15 @@
+name: proiectcolectiv2026
+services:
+  db:
+    image: postgres:18 #descrca Postgresql 18
+    environment:
+      POSTGRES_DB: template #creeaza baza d date template
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD} #foloseste parola din env
+    ports: #permite conectarea locala la baza de date
+      - "127.0.0.1:5432:5432"
+    volumes: #pastreaza datele cand opresti containereul
+      - postgres_data:/var/lib/postgresql
+
+volumes:
+  postgres_data:

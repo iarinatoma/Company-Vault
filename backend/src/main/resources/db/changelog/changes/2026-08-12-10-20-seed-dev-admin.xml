@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Development convenience: a known admin so the first login works out of the box.
+         Context "dev" only; application-prod.properties selects context "prod", so this
+         never runs in production. Credentials: admin@example.com / Admin-Starter-1 -->
+    <changeSet id="2026-08-12-10-20-seed-dev-admin" author="template" context="dev">
+        <insert tableName="users">
+            <column name="id" value="00000000-0000-0000-0000-0000000000a1"/>
+            <column name="created_at" valueComputed="now()"/>
+            <column name="updated_at" valueComputed="now()"/>
+            <column name="version" valueNumeric="0"/>
+            <column name="email" value="admin@example.com"/>
+            <column name="password_hash" value="{bcrypt}$2y$12$zQZdns65Ld.lFlrZQY2RXe2vU.qcCUmCG1yNaJ5cIxey3.E6Zt4X6"/>
+            <column name="role" value="ADMIN"/>
+            <column name="two_factor_enabled" valueBoolean="false"/>
+            <column name="failed_login_attempts" valueNumeric="0"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
