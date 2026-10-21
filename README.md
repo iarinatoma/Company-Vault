@@ -1,4 +1,4 @@
-# Company Vault 🔐
+# Company Vault 
 
 **Proiect colectiv — ghid de instalare și pornire pentru echipă (Windows + VS Code)**
 
@@ -121,7 +121,7 @@ wsl --version
 
 > **Nu trebuie să instalezi separat PostgreSQL, Maven sau Angular CLI.** PostgreSQL vine în imaginea Docker; backend-ul are Maven Wrapper (`mvnw.cmd`); Angular CLI vine prin dependențele din frontend.
 
-### Pasul 3 — Descarcă proiectul de pe GitHub
+### Pasul 3 — Descarcă proiectul de pe GitHub DACA NU AI FACUT O DEJA
 
 1. Alege folderul din calculator în care vrei să ții proiectul.
 2. Deschide PowerShell în acel folder. Execută:
@@ -136,7 +136,6 @@ wsl --version
 
 **Ce este `git clone`?** Face o copie locală a repository-ului de pe GitHub, inclusiv istoricul Git. **Nu executa `git init` într-un proiect clonat.** Dacă ai clonat deja proiectul, nu îl clona din nou.
 
-> Acest pas va funcționa cu toate fișierele după ce versiunea pregătită de echipă este publicată pe GitHub. Dacă repository-ul este încă gol, așteaptă primul push.
 
 ### Pasul 4 — Creează MANUAL `backend/.env` (foarte important)
 
