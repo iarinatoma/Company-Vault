@@ -451,3 +451,4 @@ Documentația tehnică originală a profesorului rămâne disponibilă în:
 Acest README este ghidul simplificat pentru **prima configurare și pornirea zilnică a proiectului**.
 
 yay andreeaaaaaaaaa
+iarina yay
