@@ -449,6 +449,7 @@ Documentația tehnică originală a profesorului rămâne disponibilă în:
 - [`frontend/README.md`](frontend/README.md) — Angular, autentificare, structură frontend, teste și build.
 
 Acest README este ghidul simplificat pentru **prima configurare și pornirea zilnică a proiectului**.
-
 yay andreeaaaaaaaaa
 iarina yay
+Circa Ioan Andrei
+bla bla
