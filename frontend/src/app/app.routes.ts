@@ -9,6 +9,11 @@ export const routes: Routes = [
     loadChildren: () => import('@app/account/account.routes').then((m) => m.accountRoutes),
   },
   {
+    path: 'register',
+    canActivate: [guestGuard],
+    loadComponent: () => import('@app/account/feature-register/register').then((m) => m.Register),
+  },
+  {
     path: 'home',
     canActivate: [authGuard],
     loadChildren: () => import('@app/home/home.routes').then((m) => m.homeRoutes),

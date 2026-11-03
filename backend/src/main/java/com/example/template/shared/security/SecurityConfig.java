@@ -60,7 +60,11 @@ public class SecurityConfig {
                                 : "default-src 'none'; frame-ancestors 'none'")))
                 .authorizeHttpRequests(authorize -> {
                     authorize
-                            .requestMatchers(HttpMethod.POST, "/api/v*/auth/login", "/api/v*/auth/2fa/verify")
+                            .requestMatchers(
+                                    HttpMethod.POST,
+                                    "/api/v*/auth/login",
+                                    "/api/v*/auth/register",
+                                    "/api/v*/auth/2fa/verify")
                             .permitAll()
                             // refresh and logout authenticate by cookie alone
                             .requestMatchers(HttpMethod.POST, "/api/v*/auth/refresh", "/api/v*/auth/logout")

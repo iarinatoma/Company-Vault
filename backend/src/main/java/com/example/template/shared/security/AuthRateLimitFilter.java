@@ -23,7 +23,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
-    private static final Pattern LIMITED_PATHS = Pattern.compile("^/api/v\\d+/auth/(login|refresh|2fa/verify)$");
+    private static final Pattern LIMITED_PATHS =
+            Pattern.compile("^/api/v\\d+/auth/(login|register|refresh|2fa/verify)$");
 
     private final AppSecurityProperties properties;
     private final ProblemDetailResponseWriter responseWriter;
