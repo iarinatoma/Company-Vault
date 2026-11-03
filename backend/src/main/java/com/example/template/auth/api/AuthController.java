@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 /**
  * Anonymous entry points only; refresh and logout authenticate by cookie alone (their CSRF
  * defense is the origin check in the filter chain). Refresh and logout take no body DTO —
@@ -35,6 +38,9 @@ public class AuthController {
         this.refreshTokenCookieFactory = refreshTokenCookieFactory;
     }
 
+    @Operation(summary = "Sign in with e-mail and password",
+            description = "Returns an access token, or a 2FA challenge if two-factor is enabled.")
+    @ApiResponse(responseCode = "401", description = "E-mail or password incorrect")
     @PostMapping(path = "/login", version = "1")
     @PreAuthorize("permitAll()")
     public ResponseEntity<LoginResult> login(@Valid @RequestBody LoginRequest request) {
