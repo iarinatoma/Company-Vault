@@ -3,9 +3,11 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from '@app/shared/config/util/app-config';
 import {
+  ForgotPasswordRequest,
   LoginCredentials,
   LoginResponse,
   RegisterCredentials,
+  ResetPasswordRequest,
   TokenPair,
   User,
 } from '@app/shared/auth/models/auth';
@@ -27,6 +29,16 @@ export class AuthClient {
 
   register(credentials: RegisterCredentials): Observable<User> {
     return this.http.post<User>(`${this.baseUrl}/api/v1/auth/register`, credentials);
+  }
+
+  /** Answers 202 for any well-formed e-mail — it never reveals whether an account exists. */
+  forgotPassword(request: ForgotPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/api/v1/auth/forgot-password`, request);
+  }
+
+  /** Answers 204 on success, 401 if the token is unknown, expired or already used. */
+  resetPassword(request: ResetPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/api/v1/auth/reset-password`, request);
   }
 
   refresh(): Observable<TokenPair> {
