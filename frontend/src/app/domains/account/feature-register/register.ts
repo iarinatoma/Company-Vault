@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { email, form, FormField, maxLength, required, schema, submit } from '@angular/forms/signals';import { RouterLink } from '@angular/router';
+import { email, form, FormField, maxLength, required, schema, submit } from '@angular/forms/signals';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthClient } from '@app/shared/auth/data/auth-client';
 import { passwordPolicy } from '@app/shared/auth/util/password-policy';
