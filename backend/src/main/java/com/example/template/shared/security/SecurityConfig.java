@@ -64,6 +64,8 @@ public class SecurityConfig {
                                     HttpMethod.POST,
                                     "/api/v*/auth/login",
                                     "/api/v*/auth/register",
+                                    "/api/v*/auth/forgot-password",
+                                    "/api/v*/auth/reset-password",
                                     "/api/v*/auth/2fa/verify")
                             .permitAll()
                             // refresh and logout authenticate by cookie alone
