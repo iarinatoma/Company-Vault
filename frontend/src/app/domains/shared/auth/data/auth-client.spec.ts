@@ -14,6 +14,7 @@ describe('AuthClient', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
+
   afterEach(() => http.verify());
 
   it('registers a new account through the public auth endpoint', async () => {
