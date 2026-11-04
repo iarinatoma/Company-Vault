@@ -1,5 +1,6 @@
 package com.example.template.auth.service;
 
+import com.example.template.auth.repository.PasswordResetTokenRepository;
 import com.example.template.auth.repository.RecoveryCodeRepository;
 import com.example.template.auth.repository.RefreshTokenRepository;
 import com.example.template.user.event.UserDeletedEvent;
@@ -21,11 +22,15 @@ public class UserDeletionCleanup {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final RecoveryCodeRepository recoveryCodeRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     public UserDeletionCleanup(
-            RefreshTokenRepository refreshTokenRepository, RecoveryCodeRepository recoveryCodeRepository) {
+            RefreshTokenRepository refreshTokenRepository,
+            RecoveryCodeRepository recoveryCodeRepository,
+            PasswordResetTokenRepository passwordResetTokenRepository) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.recoveryCodeRepository = recoveryCodeRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
     }
 
     @EventListener
@@ -33,6 +38,12 @@ public class UserDeletionCleanup {
     public void onUserDeleted(UserDeletedEvent event) {
         int tokens = refreshTokenRepository.deleteAllByUserId(event.userId());
         int codes = recoveryCodeRepository.deleteAllByUserId(event.userId());
-        log.info("Removed {} refresh tokens and {} recovery codes of deleted user {}", tokens, codes, event.userId());
+        int resetTokens = passwordResetTokenRepository.deleteAllByUserId(event.userId());
+        log.info(
+                "Removed {} refresh tokens, {} recovery codes and {} password reset tokens of deleted user {}",
+                tokens,
+                codes,
+                resetTokens,
+                event.userId());
     }
 }

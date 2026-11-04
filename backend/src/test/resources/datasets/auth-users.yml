@@ -36,3 +36,4 @@ users:
 refresh_tokens: []
 recovery_codes: []
 consumed_two_factor_tokens: []
+password_reset_tokens: []
