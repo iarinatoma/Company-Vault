@@ -67,7 +67,8 @@ class ArchitectureTest {
                     "java..",
                     "jakarta..",
                     "org.jspecify..",
-                    "org.springframework..")
+                    "org.springframework..",
+                    "io.swagger.v3.oas.annotations..")
             .because("controllers hold no logic beyond delegation");
 
     @ArchTest
