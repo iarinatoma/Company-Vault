@@ -1,9 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { email, form, FormField, maxLength, minLength, required, schema, submit } from '@angular/forms/signals';
-import { RouterLink } from '@angular/router';
+import { email, form, FormField, maxLength, required, schema, submit } from '@angular/forms/signals';import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthClient } from '@app/shared/auth/data/auth-client';
+import { passwordPolicy } from '@app/shared/auth/util/password-policy';
 
 interface RegisterFormModel {
   email: string;
@@ -11,13 +11,19 @@ interface RegisterFormModel {
   confirmPassword: string;
 }
 
+/** True when a 400 VALIDATION_FAILED problem names the password field. */
+function passwordRejected(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse)) return false;
+  const body = error.error as { errors?: Record<string, string> } | null;
+  return !!body?.errors && 'password' in body.errors;
+}
+
 const registerSchema = schema<RegisterFormModel>((path) => {
   required(path.email);
   email(path.email);
   maxLength(path.email, 320);
   required(path.password);
-  minLength(path.password, 12);
-  maxLength(path.password, 128);
+  passwordPolicy(path.password);
   required(path.confirmPassword);
 });
 
@@ -59,6 +65,13 @@ export class Register {
   private messageFor(error: unknown): string {
     const status = error instanceof HttpErrorResponse ? error.status : -1;
     switch (status) {
+      case 400:
+        // Length and letter/digit are checked here already; what the backend can still reject
+        // is a well-known or trivially repetitive password.
+        if (passwordRejected(error)) {
+          return $localize`:@@register.passwordRejected:This password is too common or too simple. Please choose another one.`;
+        }
+        return $localize`:@@register.failed:Account creation failed. Please try again.`;
       case 409:
         return $localize`:@@register.emailInUse:An account with this e-mail address already exists.`;
       case 429:
