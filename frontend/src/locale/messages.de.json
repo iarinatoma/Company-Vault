@@ -1,6 +1,7 @@
 {
   "locale": "de",
   "translations": {
+    "login.idleSignedOut": "Sie wurden nach längerer Inaktivität abgemeldet. Bitte melden Sie sich erneut an.",
     "register.passwordLetterDigit": "Verwenden Sie mindestens einen Buchstaben und eine Ziffer.",
     "register.passwordHint": "Mindestens 12 Zeichen, mit einem Buchstaben und einer Ziffer. Vermeiden Sie gängige Passwörter.",
     "register.passwordRejected": "Dieses Passwort ist zu verbreitet oder zu einfach. Bitte wählen Sie ein anderes.",
