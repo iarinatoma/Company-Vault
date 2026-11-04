@@ -54,9 +54,15 @@
                 <ng-container i18n="@@register.passwordRequired">Password is required.</ng-container>
               } @else if (form.password().errors()[0]?.kind === 'minLength') {
                 <ng-container i18n="@@register.passwordLength">Use at least 12 characters.</ng-container>
+              } @else if (form.password().errors()[0]?.kind === 'pattern') {
+                <ng-container i18n="@@register.passwordLetterDigit">Use at least one letter and one digit.</ng-container>
               } @else {
                 <ng-container i18n="@@register.passwordMaxLength">Password must be 128 characters or fewer.</ng-container>
               }
+            </p>
+          } @else {
+            <p class="mt-1 text-xs text-slate-500" i18n="@@register.passwordHint">
+              At least 12 characters, with a letter and a digit. Avoid common passwords.
             </p>
           }
         </div>

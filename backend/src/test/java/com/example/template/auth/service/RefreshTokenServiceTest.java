@@ -105,6 +105,19 @@ class RefreshTokenServiceTest {
                     .matches("[0-9a-f]{64}")
                     .isNotEqualTo(issued.rawToken());
         }
+        
+        @Test
+        @DisplayName("on rotation keeps the given session expiry instead of starting a new TTL")
+        void issue_withExpiry_persistsExactlyThatExpiry() {
+            when(refreshTokenRepository.save(any(RefreshToken.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            var sessionExpiry = Instant.now().plusSeconds(90);
+
+            var issued = refreshTokenService.issue(USER_ID, FAMILY_ID, sessionExpiry);
+
+            assertThat(issued.entity().getExpiresAt()).isEqualTo(sessionExpiry);
+            assertThat(issued.entity().getFamilyId()).isEqualTo(FAMILY_ID);
+        }
 
         @Test
         @DisplayName("produces different raw tokens and different hashes on consecutive issues")

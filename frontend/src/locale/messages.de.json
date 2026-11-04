@@ -1,6 +1,11 @@
 {
   "locale": "de",
   "translations": {
+    "login.idleSignedOut": "Sie wurden nach längerer Inaktivität abgemeldet. Bitte melden Sie sich erneut an.",
+    "register.passwordLetterDigit": "Verwenden Sie mindestens einen Buchstaben und eine Ziffer.",
+    "register.passwordHint": "Mindestens 12 Zeichen, mit einem Buchstaben und einer Ziffer. Vermeiden Sie gängige Passwörter.",
+    "register.passwordRejected": "Dieses Passwort ist zu verbreitet oder zu einfach. Bitte wählen Sie ein anderes.",
+    "users.err.weakPassword": "Dieses Passwort ist zu schwach oder zu verbreitet. Bitte wählen Sie ein anderes.",
     "nav.home": "Start",
     "nav.logout": "Abmelden",
     "nav.login": "Anmelden",
@@ -72,7 +77,7 @@
     "userForm.role": "Rolle",
     "userForm.ownRole": "Sie können Ihre eigene Rolle nicht ändern.",
     "userForm.password": "Passwort",
-    "userForm.passwordInvalid": "Das Passwort braucht mindestens 12 Zeichen.",
+    "userForm.passwordInvalid": "Das Passwort braucht mindestens 12 Zeichen, mit einem Buchstaben und einer Ziffer.",
     "userForm.passwordKeep": "Leer lassen, um das aktuelle Passwort zu behalten.",
     "userForm.cancel": "Abbrechen",
     "userForm.save": "Speichern",

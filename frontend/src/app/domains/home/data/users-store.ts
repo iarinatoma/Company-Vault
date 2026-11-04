@@ -103,7 +103,12 @@ export class UsersStore {
 
 function describe(error: unknown): string {
   if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { code?: string } | null)?.code;
+    const body = error.error as { code?: string; errors?: Record<string, string> } | null;
+    const code = body?.code;
+    if (code === 'VALIDATION_FAILED' && body?.errors && 'password' in body.errors) {
+      // The form checks length and letter/digit; the backend also rejects common passwords.
+      return $localize`:@@users.err.weakPassword:This password is too weak or too common. Please choose another one.`;
+    }
     switch (code) {
       case 'EMAIL_ALREADY_IN_USE':
         return $localize`:@@users.err.emailInUse:This e-mail address is already in use.`;

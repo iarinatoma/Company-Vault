@@ -1,6 +1,7 @@
 package com.example.template.user.dto;
 
 import com.example.template.shared.security.Role;
+import com.example.template.shared.validation.StrongPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,4 +12,4 @@ import org.jspecify.annotations.Nullable;
 public record UpdateUserRequest(
         @NotBlank @Email @Size(max = 320) String email,
         @NotNull Role role,
-        @Size(min = 12, max = 128) @Nullable String password) {}
+        @StrongPassword @Nullable String password) {}

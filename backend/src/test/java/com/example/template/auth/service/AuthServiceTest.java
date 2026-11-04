@@ -410,20 +410,25 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("rotates the old token and issues a new pair within the same family")
+        @DisplayName("rotates the old token and issues a new pair within the same family, keeping the session expiry")
         void refresh_validToken_rotatesOldTokenAndIssuesPairInSameFamily() {
             var stored = storedRefreshToken();
+            var sessionExpiry = stored.getExpiresAt();
             var user = user();
             when(refreshTokenService.find(RAW_REFRESH_TOKEN)).thenReturn(Optional.of(stored));
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            stubIssuedPair();
+            var issued = new RefreshTokenService.IssuedRefreshToken(RAW_REFRESH_TOKEN, new RefreshToken());
+            when(refreshTokenService.issue(USER_ID, FAMILY_ID, sessionExpiry)).thenReturn(issued);
+            when(jwtService.mintAccessToken(USER_ID, EMAIL, Role.USER)).thenReturn(ACCESS_TOKEN);
 
             var result = authService.refresh(RAW_REFRESH_TOKEN);
 
             assertThat(result.accessToken()).isEqualTo(ACCESS_TOKEN);
             assertThat(result.refreshToken()).isEqualTo(RAW_REFRESH_TOKEN);
             assertThat(stored.getRevokedAt()).isNotNull();
-            verify(refreshTokenService).issue(USER_ID, FAMILY_ID);
+            // Same family AND same expiry: a refresh must never extend the session.
+            verify(refreshTokenService).issue(USER_ID, FAMILY_ID, sessionExpiry);
+            verify(refreshTokenService, never()).issue(any(), any());
         }
     }
 
