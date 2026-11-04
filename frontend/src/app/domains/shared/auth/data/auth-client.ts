@@ -2,11 +2,17 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { APP_CONFIG } from '@app/shared/config/util/app-config';
-import { LoginCredentials, LoginResponse, TokenPair, User } from '@app/shared/auth/models/auth';
+import {
+  LoginCredentials,
+  LoginResponse,
+  RegisterCredentials,
+  TokenPair,
+  User,
+} from '@app/shared/auth/models/auth';
 
 /**
- * Thin HTTP layer for `/api/v1/auth` and `/api/v1/users/me`. The refresh token lives in an
- * HttpOnly cookie, so every auth call is sent with credentials.
+ * Thin HTTP layer for `/api/v1/auth` and `/api/v1/users/me`. Cookie-backed auth calls include
+ * credentials so the HttpOnly refresh token can be sent and rotated.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthClient {
@@ -17,6 +23,10 @@ export class AuthClient {
     return this.http.post<LoginResponse>(`${this.baseUrl}/api/v1/auth/login`, credentials, {
       withCredentials: true,
     });
+  }
+
+  register(credentials: RegisterCredentials): Observable<User> {
+    return this.http.post<User>(`${this.baseUrl}/api/v1/auth/register`, credentials);
   }
 
   refresh(): Observable<TokenPair> {
