@@ -18,3 +18,4 @@ class TestcontainersConfiguration {
         return new PostgreSQLContainer("postgres:18");
     }
 }
+
