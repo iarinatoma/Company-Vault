@@ -89,4 +89,4 @@ npm test             # watch mode (Chromium)
 npm run test:ci      # headless, single run
 npm run lint         # ESLint
 ```
-Iarina yay
+yay iarina

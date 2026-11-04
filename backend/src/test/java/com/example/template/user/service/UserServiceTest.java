@@ -14,6 +14,7 @@ import com.example.template.shared.security.AuthPrincipal;
 import com.example.template.shared.security.Role;
 import com.example.template.shared.security.ScopeAccessGuard;
 import com.example.template.user.dto.CreateUserRequest;
+import com.example.template.user.dto.RegisterUserRequest;
 import com.example.template.user.dto.UpdateUserRequest;
 import com.example.template.user.dto.UserResponse;
 import com.example.template.user.event.UserCreatedEvent;
@@ -198,6 +199,34 @@ class UserServiceTest {
                     .isEqualTo(ErrorCode.EMAIL_ALREADY_IN_USE);
             verify(userRepository, never()).save(any());
             verify(eventPublisher, never()).publishEvent(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("register")
+    class RegisterTests {
+
+        @Test
+        @DisplayName("creates a standard user and never lets registration choose a privileged role")
+        void register_emailFree_createsUserRole() {
+            var request = new RegisterUserRequest("new@example.com", "long-password-123");
+            when(userRepository.existsByEmail(request.email())).thenReturn(false);
+            when(passwordEncoder.encode(request.password())).thenReturn("{bcrypt}encoded");
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+                var saved = invocation.getArgument(0, User.class);
+                ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
+                return saved;
+            });
+            when(userMapper.toResponse(any(User.class))).thenReturn(response(request.email()));
+
+            var created = userService.register(request);
+
+            assertThat(created.role()).isEqualTo(Role.USER);
+            var savedUser = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(savedUser.capture());
+            assertThat(savedUser.getValue().getRole()).isEqualTo(Role.USER);
+            assertThat(savedUser.getValue().getPasswordHash()).isEqualTo("{bcrypt}encoded");
+            verify(eventPublisher).publishEvent(any(UserCreatedEvent.class));
         }
     }
 

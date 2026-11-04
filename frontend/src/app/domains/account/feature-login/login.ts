@@ -1,8 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { email, form, FormField, required, schema, submit } from '@angular/forms/signals';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthStore } from '@app/shared/auth/data/auth-store';
+import { IdleLogout } from '@app/shared/auth/data/idle-logout';
 import { LoginCredentials } from '@app/shared/auth/models/auth';
 
 const loginSchema = schema<LoginCredentials>((path) => {
@@ -17,12 +18,13 @@ function safeReturnUrl(url: string | undefined): string {
 
 @Component({
   selector: 'app-login',
-  imports: [FormField],
+  imports: [FormField, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html',
 })
 export class Login {
   private readonly auth = inject(AuthStore);
+  protected readonly idle = inject(IdleLogout);
   private readonly router = inject(Router);
 
   readonly returnUrl = input<string>();

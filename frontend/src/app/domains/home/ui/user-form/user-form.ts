@@ -15,13 +15,13 @@ import {
   email,
   form,
   FormField,
-  minLength,
   required,
   schema,
   submit,
 } from '@angular/forms/signals';
 import { ROLES, Role, User } from '@app/shared/auth/models/auth';
 import { UserInput } from '@app/home/data/users-client';
+import { passwordPolicy } from '@app/shared/auth/util/password-policy';
 
 interface UserFormModel {
   email: string;
@@ -69,7 +69,7 @@ export class UserForm {
       applyWhen(
         path.password,
         ({ value }) => value() !== '',
-        (password) => minLength(password, 12),
+        (password) => passwordPolicy(password),
       );
     }),
   );

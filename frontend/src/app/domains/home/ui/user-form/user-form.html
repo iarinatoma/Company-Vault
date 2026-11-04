@@ -53,7 +53,7 @@
         [formField]="form.password"
       />
       @if (form.password().invalid() && form.password().touched()) {
-        <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@userForm.passwordInvalid">The password needs at least 12 characters.</p>
+        <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@userForm.passwordInvalid">The password needs at least 12 characters, with a letter and a digit.</p>
       } @else if (!isCreate()) {
         <p class="mt-1 text-xs text-slate-500" i18n="@@userForm.passwordKeep">Leave empty to keep the current password.</p>
       }

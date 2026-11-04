@@ -1,0 +1,119 @@
+<section class="mx-auto mt-12 w-full max-w-sm">
+  <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+    @if (registered()) {
+      <h1 class="text-2xl font-semibold tracking-tight" i18n="@@register.success">Account created</h1>
+      <p class="mt-2 text-sm text-slate-600" i18n="@@register.successSubtitle">
+        Your account is ready. Sign in to continue.
+      </p>
+      <a
+        routerLink="/login"
+        class="mt-6 block w-full rounded-md bg-indigo-600 px-4 py-2 text-center text-sm font-medium text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        i18n="@@register.loginLink"
+      >Sign in</a>
+    } @else {
+      <h1 class="text-2xl font-semibold tracking-tight" i18n="@@register.title">Create an account</h1>
+      <p class="mt-1 text-sm text-slate-500" i18n="@@register.subtitle">Register to get started.</p>
+
+      <form class="mt-6 space-y-4" novalidate (submit)="$event.preventDefault(); signUp()">
+        <div>
+          <label for="register-email" class="block text-sm font-medium text-slate-700" i18n="@@register.email">E-mail</label>
+          <input
+            id="register-email"
+            type="email"
+            autocomplete="email"
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 aria-invalid:border-red-500"
+            [formField]="form.email"
+            [attr.aria-invalid]="form.email().invalid() && form.email().touched()"
+          />
+          @if (form.email().invalid() && form.email().touched()) {
+            <p class="mt-1 text-xs text-red-600" role="alert">
+              @if (form.email().errors()[0]?.kind === 'required') {
+                <ng-container i18n="@@register.emailRequired">E-mail is required.</ng-container>
+              } @else if (form.email().errors()[0]?.kind === 'maxLength') {
+                <ng-container i18n="@@register.emailLength">E-mail must be 320 characters or fewer.</ng-container>
+              } @else {
+                <ng-container i18n="@@register.emailInvalid">Enter a valid e-mail address.</ng-container>
+              }
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="register-password" class="block text-sm font-medium text-slate-700" i18n="@@register.password">Password</label>
+          <input
+            id="register-password"
+            type="password"
+            autocomplete="new-password"
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 aria-invalid:border-red-500"
+            [formField]="form.password"
+            [attr.aria-invalid]="form.password().invalid() && form.password().touched()"
+          />
+          @if (form.password().invalid() && form.password().touched()) {
+            <p class="mt-1 text-xs text-red-600" role="alert">
+              @if (form.password().errors()[0]?.kind === 'required') {
+                <ng-container i18n="@@register.passwordRequired">Password is required.</ng-container>
+              } @else if (form.password().errors()[0]?.kind === 'minLength') {
+                <ng-container i18n="@@register.passwordLength">Use at least 12 characters.</ng-container>
+              } @else if (form.password().errors()[0]?.kind === 'pattern') {
+                <ng-container i18n="@@register.passwordLetterDigit">Use at least one letter and one digit.</ng-container>
+              } @else {
+                <ng-container i18n="@@register.passwordMaxLength">Password must be 128 characters or fewer.</ng-container>
+              }
+            </p>
+          } @else {
+            <p class="mt-1 text-xs text-slate-500" i18n="@@register.passwordHint">
+              At least 12 characters, with a letter and a digit. Avoid common passwords.
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="register-confirm-password" class="block text-sm font-medium text-slate-700" i18n="@@register.confirmPassword">
+            Confirm password
+          </label>
+          <input
+            id="register-confirm-password"
+            type="password"
+            autocomplete="new-password"
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 aria-invalid:border-red-500"
+            [formField]="form.confirmPassword"
+            [attr.aria-invalid]="(form.confirmPassword().invalid() && form.confirmPassword().touched()) || passwordMismatch()"
+            (input)="passwordMismatch.set(false)"
+          />
+          @if (form.confirmPassword().invalid() && form.confirmPassword().touched()) {
+            <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@register.confirmRequired">
+              Please confirm your password.
+            </p>
+          } @else if (passwordMismatch()) {
+            <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@register.passwordMismatch">
+              The passwords do not match.
+            </p>
+          }
+        </div>
+
+        @if (error(); as message) {
+          <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{{ message }}</p>
+        }
+
+        <button
+          type="submit"
+          class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="form().submitting()"
+        >
+          @if (form().submitting()) {
+            <ng-container i18n="@@register.submitting">Creating account…</ng-container>
+          } @else {
+            <ng-container i18n="@@register.submit">Create account</ng-container>
+          }
+        </button>
+      </form>
+
+      <p class="mt-5 text-center text-sm text-slate-600">
+        <ng-container i18n="@@register.haveAccount">Already have an account?</ng-container>
+        <a routerLink="/login" class="font-medium text-indigo-600 hover:text-indigo-500" i18n="@@register.signInLink">
+          Sign in
+        </a>
+      </p>
+    }
+  </div>
+</section>

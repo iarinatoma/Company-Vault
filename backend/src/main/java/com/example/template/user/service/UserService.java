@@ -3,8 +3,10 @@ package com.example.template.user.service;
 import com.example.template.shared.error.ApiException;
 import com.example.template.shared.error.ErrorCode;
 import com.example.template.shared.security.AuthPrincipal;
+import com.example.template.shared.security.Role;
 import com.example.template.shared.security.ScopeAccessGuard;
 import com.example.template.user.dto.CreateUserRequest;
+import com.example.template.user.dto.RegisterUserRequest;
 import com.example.template.user.dto.UpdateUserRequest;
 import com.example.template.user.dto.UserResponse;
 import com.example.template.user.event.UserCreatedEvent;
@@ -75,13 +77,22 @@ public class UserService {
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        return createUser(request.email(), request.password(), request.role());
+    }
+
+    @Transactional
+    public UserResponse register(RegisterUserRequest request) {
+        return createUser(request.email(), request.password(), Role.USER);
+    }
+
+    private UserResponse createUser(String email, String password, Role role) {
+        if (userRepository.existsByEmail(email)) {
             throw new ApiException(ErrorCode.EMAIL_ALREADY_IN_USE);
         }
         var user = new User();
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(request.role());
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setRole(role);
         var saved = userRepository.save(user);
         log.info("User {} created with role {}", saved.requireId(), saved.getRole());
         eventPublisher.publishEvent(new UserCreatedEvent(saved.requireId(), saved.getEmail()));

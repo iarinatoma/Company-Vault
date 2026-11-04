@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -61,6 +63,53 @@ class AuthControllerIT extends AbstractIntegrationTest {
     }
 
     // --- login ---
+
+    @Test
+    @DisplayName("anonymous registration creates a standard user without returning password data")
+    void register_anonymous_returnsCreatedUser() {
+        String email = "registered-" + UUID.randomUUID() + "@test.local";
+
+        var response = authApi.register(email, "brand-new-password-1");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var body = bodyOf(response);
+        assertThat(body.get("email").asString()).isEqualTo(email);
+        assertThat(body.get("role").asString()).isEqualTo("USER");
+        assertThat(body.has("password")).isFalse();
+        assertThat(userRepository.existsByEmail(email)).isTrue();
+    }
+
+    @Test
+    @DisplayName("registration answers 409 EMAIL_ALREADY_IN_USE for a duplicate email")
+    void register_duplicateEmail_returns409() {
+        var response = authApi.register(TestUsers.AUTH_USER_EMAIL, "brand-new-password-1");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(response).get("code").asString()).isEqualTo("EMAIL_ALREADY_IN_USE");
+    }
+
+    @Test
+    @DisplayName("registration rejects passwords shorter than 12 characters")
+    void register_shortPassword_returns400() {
+        var response = authApi.register("short-password-" + UUID.randomUUID() + "@test.local", "too-short");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(response).get("code").asString()).isEqualTo("VALIDATION_FAILED");
+    }
+    
+
+    @Test
+    @DisplayName("registration rejects long but weak passwords (no digit, or a well-known password)")
+    void register_weakPassword_returns400WithPasswordFieldError() {
+        for (String weak : new String[] {"only-letters-no-digits", "password1234"}) {
+            var response = authApi.register("weak-password-" + UUID.randomUUID() + "@test.local", weak);
+
+            assertThat(response.getStatusCode()).as(weak).isEqualTo(HttpStatus.BAD_REQUEST);
+            var body = bodyOf(response);
+            assertThat(body.get("code").asString()).isEqualTo("VALIDATION_FAILED");
+            assertThat(body.get("errors").has("password")).as(weak).isTrue();
+        }
+    }
 
     @Test
     @DisplayName("login returns an access token in the body and the refresh token only as an HttpOnly cookie")

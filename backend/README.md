@@ -59,3 +59,7 @@ db/changelog/changes/ Liquibase, one table per file, datetime-named
 The values in `application.properties` are for local development only. For other environments
 override them with environment variables or a git-ignored `.env` / `.env-prod` file
 (`spring.config.import`). A committed real secret is an incident, not a cleanup.
+
+
+
+Circa Ioan Andrei
