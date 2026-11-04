@@ -96,6 +96,20 @@ class AuthControllerIT extends AbstractIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(bodyOf(response).get("code").asString()).isEqualTo("VALIDATION_FAILED");
     }
+    
+
+    @Test
+    @DisplayName("registration rejects long but weak passwords (no digit, or a well-known password)")
+    void register_weakPassword_returns400WithPasswordFieldError() {
+        for (String weak : new String[] {"only-letters-no-digits", "password1234"}) {
+            var response = authApi.register("weak-password-" + UUID.randomUUID() + "@test.local", weak);
+
+            assertThat(response.getStatusCode()).as(weak).isEqualTo(HttpStatus.BAD_REQUEST);
+            var body = bodyOf(response);
+            assertThat(body.get("code").asString()).isEqualTo("VALIDATION_FAILED");
+            assertThat(body.get("errors").has("password")).as(weak).isTrue();
+        }
+    }
 
     @Test
     @DisplayName("login returns an access token in the body and the refresh token only as an HttpOnly cookie")

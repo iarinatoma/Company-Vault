@@ -156,7 +156,9 @@ public class AuthService {
             throw new ApiException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
         stored.setRevokedAt(Instant.now());
-        return issueTokenPair(user, stored.getFamilyId());
+        // The rotated token keeps the old expiry: refreshing never extends the session.
+        return tokenPair(
+                user, refreshTokenService.issue(user.requireId(), stored.getFamilyId(), stored.getExpiresAt()));
     }
 
     /**
@@ -175,7 +177,10 @@ public class AuthService {
     }
 
     private TokenPairResponse issueTokenPair(User user, UUID familyId) {
-        var issued = refreshTokenService.issue(user.requireId(), familyId);
+        return tokenPair(user, refreshTokenService.issue(user.requireId(), familyId));
+    }
+
+    private TokenPairResponse tokenPair(User user, RefreshTokenService.IssuedRefreshToken issued) {
         String accessToken = jwtService.mintAccessToken(user.requireId(), user.getEmail(), user.getRole());
         return new TokenPairResponse(
                 accessToken, "Bearer", properties.jwt().accessTtl().toSeconds(), issued.rawToken());

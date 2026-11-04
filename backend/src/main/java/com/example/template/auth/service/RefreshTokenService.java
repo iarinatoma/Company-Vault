@@ -32,8 +32,20 @@ public class RefreshTokenService {
 
     public record IssuedRefreshToken(String rawToken, RefreshToken entity) {}
 
-    /** Participates in the caller's transaction — issuing is part of the login/refresh flow. */
+    /**
+     * Starts a new session (login): the token expires one refresh TTL from now.
+     * Participates in the caller's transaction — issuing is part of the login/refresh flow.
+     */
     public IssuedRefreshToken issue(UUID userId, UUID familyId) {
+        return issue(userId, familyId, Instant.now().plus(properties.refreshToken().ttl()));
+    }
+
+    /**
+     * Rotation within an existing session: the new token inherits the expiry of the token it
+     * replaces, so refreshing never extends a session — it ends at most one refresh TTL after
+     * login (absolute session lifetime), and the user has to sign in again.
+     */
+    public IssuedRefreshToken issue(UUID userId, UUID familyId, Instant expiresAt) {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -41,7 +53,7 @@ public class RefreshTokenService {
         token.setUserId(userId);
         token.setTokenHash(sha256Hex(rawToken));
         token.setFamilyId(familyId);
-        token.setExpiresAt(Instant.now().plus(properties.refreshToken().ttl()));
+        token.setExpiresAt(expiresAt);
         return new IssuedRefreshToken(rawToken, refreshTokenRepository.save(token));
     }
 
