@@ -18,6 +18,15 @@ export interface RegisterCredentials {
   readonly password: string;
 }
 
+export interface ForgotPasswordRequest {
+  readonly email: string;
+}
+
+export interface ResetPasswordRequest {
+  readonly token: string;
+  readonly newPassword: string;
+}
+
 /** The refresh token never appears here: the backend sets it as an HttpOnly cookie. */
 export interface TokenPair {
   readonly accessToken: string;
