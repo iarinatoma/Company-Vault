@@ -23,10 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/**
- * Pure delegation: the controller sends DTOs to the service and returns the DTOs it gets
- * back. It never maps and never sees an entity — mapping lives in the service.
- */
 @RestController
 @RequestMapping("/api/v{version}/users")
 public class UserController {
@@ -37,33 +33,38 @@ public class UserController {
         this.userService = userService;
     }
 
+    // Anyone logged in can view their own profile
     @GetMapping(path = "/me", version = "1")
     @PreAuthorize("isAuthenticated()")
     public UserResponse getOwnProfile(@AuthenticationPrincipal AuthPrincipal principal) {
         return userService.getOwn(principal);
     }
 
+    // Only Administrators can look up specific users by ID
     @GetMapping(path = "/{id}", version = "1")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public UserResponse getById(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
         return userService.getById(principal, id);
     }
 
+    // Only Administrators can list all users
     @GetMapping(version = "1")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public PagedModel<UserResponse> list(@AuthenticationPrincipal AuthPrincipal principal, Pageable pageable) {
         return userService.list(principal, pageable);
     }
 
+    // Only Administrators can create new users manually
     @PostMapping(version = "1")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
         return userService.create(request);
     }
 
+    // Only Administrators can update other users
     @PutMapping(path = "/{id}", version = "1")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public UserResponse update(
             @AuthenticationPrincipal AuthPrincipal principal,
             @PathVariable UUID id,
@@ -71,8 +72,9 @@ public class UserController {
         return userService.update(principal, id, request);
     }
 
+    // Only Administrators can delete users
     @DeleteMapping(path = "/{id}", version = "1")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
         userService.delete(principal, id);

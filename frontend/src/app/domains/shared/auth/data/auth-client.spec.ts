@@ -14,7 +14,6 @@ describe('AuthClient', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-
   afterEach(() => http.verify());
 
   it('registers a new account through the public auth endpoint', async () => {
@@ -28,7 +27,7 @@ describe('AuthClient', () => {
     request.flush({
       id: '1',
       email: 'new@example.com',
-      role: 'USER',
+      role: 'MEMBER',
       twoFactorEnabled: false,
       createdAt: '2026-11-03T00:00:00Z',
     });
@@ -36,11 +35,12 @@ describe('AuthClient', () => {
     expect(await registration).toEqual({
       id: '1',
       email: 'new@example.com',
-      role: 'USER',
+      role: 'MEMBER',
       twoFactorEnabled: false,
       createdAt: '2026-11-03T00:00:00Z',
     });
   });
+
   it('requests a password reset link for an e-mail address', async () => {
     const done = firstValueFrom(authClient.forgotPassword({ email: 'someone@example.com' }));
     const request = http.expectOne('/api/v1/auth/forgot-password');

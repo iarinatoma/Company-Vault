@@ -82,7 +82,7 @@ public class UserService {
 
     @Transactional
     public UserResponse register(RegisterUserRequest request) {
-        return createUser(request.email(), request.password(), Role.USER);
+        return createUser(request.email(), request.password(), Role.MEMBER);
     }
 
     private UserResponse createUser(String email, String password, Role role) {

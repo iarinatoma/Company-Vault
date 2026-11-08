@@ -71,4 +71,12 @@ export class AuthStore {
     this._accessToken.set(null);
     this._user.set(null);
   }
+
+  // Add this inside the AuthStore class:
+  readonly userRole = computed(() => this._user()?.role ?? null);
+
+  hasRole(allowedRoles: string[]): boolean {
+    const role = this.userRole();
+    return role !== null && allowedRoles.includes(role);
+  }
 }

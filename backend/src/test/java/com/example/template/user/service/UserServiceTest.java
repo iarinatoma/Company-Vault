@@ -289,7 +289,7 @@ class UserServiceTest {
             when(userRepository.findById(CALLER_ID)).thenReturn(Optional.of(self));
 
             assertThatThrownBy(() ->
-                            userService.update(PRINCIPAL, CALLER_ID, new UpdateUserRequest(self.getEmail(), Role.ADMIN, null)))
+                            userService.update(PRINCIPAL, CALLER_ID, new UpdateUserRequest(self.getEmail(), Role.ADMINISTRATOR, null)))
                     .isInstanceOf(ApiException.class)
                     .extracting(exception -> ((ApiException) exception).errorCode())
                     .isEqualTo(ErrorCode.CANNOT_MODIFY_OWN_ACCOUNT);
@@ -301,7 +301,7 @@ class UserServiceTest {
             when(userRepository.findById(targetId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() ->
-                            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("a@example.com", Role.USER, null)))
+                            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("a@example.com", Role.MEMBER, null)))
                     .isInstanceOf(ApiException.class)
                     .extracting(exception -> ((ApiException) exception).errorCode())
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);
