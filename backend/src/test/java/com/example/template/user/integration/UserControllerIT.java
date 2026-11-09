@@ -132,7 +132,7 @@ class UserControllerIT extends AbstractIntegrationTest {
         // Unique-minted: the shared database survives across classes and runs.
         String email = "created-" + UUID.randomUUID() + "@test.local";
 
-        var response = userApi.create(token, email, "brand-new-password-1", "USER");
+        var response = userApi.create(token, email, "brand-new-password-1", "MEMBER");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(bodyOf(response).get("email").asString()).isEqualTo(email);
@@ -143,7 +143,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void create_duplicateEmail_returns409() {
         String token = authApi.accessTokenFor(TestUsers.ADMIN_EMAIL, TestUsers.PASSWORD);
 
-        var response = userApi.create(token, TestUsers.USER_A_EMAIL, "brand-new-password-1", "USER");
+        var response = userApi.create(token, TestUsers.USER_A_EMAIL, "brand-new-password-1", "MEMBER");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(bodyOf(response).get("code").asString()).isEqualTo("EMAIL_ALREADY_IN_USE");
@@ -154,7 +154,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void create_asUser_returns403() {
         String token = authApi.accessTokenFor(TestUsers.USER_A_EMAIL, TestUsers.PASSWORD);
 
-        var response = userApi.create(token, "nope-" + UUID.randomUUID() + "@test.local", "some-password-123", "USER");
+        var response = userApi.create(token, "nope-" + UUID.randomUUID() + "@test.local", "some-password-123", "MEMBER");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
@@ -164,7 +164,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void create_invalidBody_returns400ValidationFailed() {
         String token = authApi.accessTokenFor(TestUsers.ADMIN_EMAIL, TestUsers.PASSWORD);
 
-        var response = userApi.create(token, "not-an-email", "short", "USER");
+        var response = userApi.create(token, "not-an-email", "short", "MEMBER");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(bodyOf(response).get("code").asString()).isEqualTo("VALIDATION_FAILED");
@@ -191,7 +191,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void update_emailOfAnotherUser_returns409() {
         String token = authApi.accessTokenFor(TestUsers.ADMIN_EMAIL, TestUsers.PASSWORD);
 
-        var response = userApi.update(token, TestUsers.USER_A_ID.toString(), TestUsers.ADMIN_EMAIL, "USER", null);
+        var response = userApi.update(token, TestUsers.USER_A_ID.toString(), TestUsers.ADMIN_EMAIL, "MEMBER", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(bodyOf(response).get("code").asString()).isEqualTo("EMAIL_ALREADY_IN_USE");
@@ -202,7 +202,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void update_ownRole_returns409() {
         String token = authApi.accessTokenFor(TestUsers.ADMIN_EMAIL, TestUsers.PASSWORD);
 
-        var response = userApi.update(token, TestUsers.ADMIN_ID.toString(), TestUsers.ADMIN_EMAIL, "USER", null);
+        var response = userApi.update(token, TestUsers.ADMIN_ID.toString(), TestUsers.ADMIN_EMAIL, "MEMBER", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(bodyOf(response).get("code").asString()).isEqualTo("CANNOT_MODIFY_OWN_ACCOUNT");
@@ -213,7 +213,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void update_unknownId_returns404() {
         String token = authApi.accessTokenFor(TestUsers.ADMIN_EMAIL, TestUsers.PASSWORD);
 
-        var response = userApi.update(token, UUID.randomUUID().toString(), "x@test.local", "USER", null);
+        var response = userApi.update(token, UUID.randomUUID().toString(), "x@test.local", "MEMBER", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
@@ -223,7 +223,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void update_asUser_returns403() {
         String token = authApi.accessTokenFor(TestUsers.USER_A_EMAIL, TestUsers.PASSWORD);
 
-        var response = userApi.update(token, TestUsers.USER_B_ID.toString(), TestUsers.USER_B_EMAIL, "USER", null);
+        var response = userApi.update(token, TestUsers.USER_B_ID.toString(), TestUsers.USER_B_EMAIL, "MEMBER", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
@@ -235,7 +235,7 @@ class UserControllerIT extends AbstractIntegrationTest {
     void delete_asAdmin_returns204() {
         String token = authApi.accessTokenFor(TestUsers.ADMIN_EMAIL, TestUsers.PASSWORD);
         String email = "doomed-" + UUID.randomUUID() + "@test.local";
-        String id = bodyOf(userApi.create(token, email, "brand-new-password-1", "USER")).get("id").asString();
+        String id = bodyOf(userApi.create(token, email, "brand-new-password-1", "MEMBER")).get("id").asString();
         // Signing in creates a refresh token row that must not block the delete (FK).
         authApi.accessTokenFor(email, "brand-new-password-1");
 

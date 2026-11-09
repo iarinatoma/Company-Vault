@@ -74,7 +74,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         var body = bodyOf(response);
         assertThat(body.get("email").asString()).isEqualTo(email);
-        assertThat(body.get("role").asString()).isEqualTo("USER");
+        assertThat(body.get("role").asString()).isEqualTo("MEMBER");
         assertThat(body.has("password")).isFalse();
         assertThat(userRepository.existsByEmail(email)).isTrue();
     }

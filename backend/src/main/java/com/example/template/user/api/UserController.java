@@ -40,9 +40,10 @@ public class UserController {
         return userService.getOwn(principal);
     }
 
-    // Only Administrators can look up specific users by ID
+    // Any authenticated user can access this endpoint, but the service layer (ScopeAccessGuard)
+    // will ensure members can only see their own ID, while admins can see anyone.
     @GetMapping(path = "/{id}", version = "1")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @PreAuthorize("isAuthenticated()")
     public UserResponse getById(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
         return userService.getById(principal, id);
     }
