@@ -4,6 +4,5 @@ public enum Role {
     MEMBER,
     PROJECT_OWNER,
     AUDITOR,
-    ADMINISTRATOR,
-    MANAGER
+    ADMINISTRATOR
 }

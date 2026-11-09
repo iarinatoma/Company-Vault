@@ -22,9 +22,8 @@ public class ScopeAccessGuard {
     public void requireScopeAccess(AuthPrincipal principal, UUID ownerId) {
         boolean allowed =
                 switch (principal.role()) {
-                    case ADMINISTRATOR, PROJECT_OWNER, AUDITOR -> true;
-                    case MEMBER -> principal.userId().equals(ownerId);
-                    case MANAGER -> false;
+                    case ADMINISTRATOR, PROJECT_OWNER -> true;
+                    case MEMBER, AUDITOR -> principal.userId().equals(ownerId);
                 };
         if (!allowed) {
             throw new ApiException(ErrorCode.FORBIDDEN);
@@ -37,9 +36,8 @@ public class ScopeAccessGuard {
     public void requireAllScopes(AuthPrincipal principal) {
         boolean allowed =
                 switch (principal.role()) {
-                    case ADMINISTRATOR, PROJECT_OWNER, AUDITOR -> true;
-                    case MEMBER -> false;
-                    case MANAGER -> false;
+                    case ADMINISTRATOR, PROJECT_OWNER -> true;
+                    case MEMBER, AUDITOR -> false;
                 };
         if (!allowed) {
             throw new ApiException(ErrorCode.FORBIDDEN);
