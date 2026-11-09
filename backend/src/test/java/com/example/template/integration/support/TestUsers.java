@@ -30,5 +30,17 @@ public final class TestUsers {
     public static final UUID USER_B_ID = UUID.fromString("bbbbbbbb-0000-0000-0000-000000000003");
     public static final String USER_B_EMAIL = "users-b@test.local";
 
+    // datasets/access-grants.yml
+    public static final UUID ACCESS_WRITER_ID = UUID.fromString("cccccccc-0000-0000-0000-000000000001");
+    public static final String ACCESS_WRITER_EMAIL = "access-writer@test.local";
+    public static final UUID ACCESS_OUTSIDER_ID = UUID.fromString("cccccccc-0000-0000-0000-000000000002");
+    public static final String ACCESS_OUTSIDER_EMAIL = "access-outsider@test.local";
+    public static final UUID ACCESS_AUDITOR_ID = UUID.fromString("cccccccc-0000-0000-0000-000000000003");
+    public static final String ACCESS_AUDITOR_EMAIL = "access-auditor@test.local";
+    public static final UUID ACCESS_ADMIN_ID = UUID.fromString("cccccccc-0000-0000-0000-000000000004");
+    public static final String ACCESS_ADMIN_EMAIL = "access-admin@test.local";
+    /** The vault the writer holds WRITE (and the auditor READ) on. */
+    public static final UUID ACCESS_VAULT_ID = UUID.fromString("eeeeeeee-0000-0000-0000-000000000001");
+
     private TestUsers() {}
 }

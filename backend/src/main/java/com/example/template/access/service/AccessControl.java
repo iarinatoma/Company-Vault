@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.template.access.dto.AccessLevelResponse;
 
 /**
  * The central permission check for vaults, projects, folders and secrets. Every service method
@@ -48,6 +49,12 @@ public class AccessControl {
                 .findByUserIdAndResourceTypeAndResourceId(principal.userId(), resource.type(), resource.id())
                 .map(AccessGrant::getAccessLevel)
                 .orElse(AccessLevel.NO_ACCESS);
+    }
+
+    /** {@link #levelOf} as a response for the frontend. */
+    @Transactional(readOnly = true)
+    public AccessLevelResponse describe(AuthPrincipal principal, ResourceRef resource) {
+        return new AccessLevelResponse(resource.type(), resource.id(), levelOf(principal, resource));
     }
 
     /** Throws FORBIDDEN unless the caller has at least {@code required} on the resource. */
