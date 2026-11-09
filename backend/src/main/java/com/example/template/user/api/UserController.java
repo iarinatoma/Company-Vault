@@ -42,21 +42,21 @@ public class UserController {
 
     // Only Administrators can look up specific users by ID
     @GetMapping(path = "/{id}", version = "1")
-    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public UserResponse getById(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
         return userService.getById(principal, id);
     }
 
     // Only Administrators can list all users
     @GetMapping(version = "1")
-    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public PagedModel<UserResponse> list(@AuthenticationPrincipal AuthPrincipal principal, Pageable pageable) {
         return userService.list(principal, pageable);
     }
 
     // Only Administrators can create new users manually
     @PostMapping(version = "1")
-    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
         return userService.create(request);
@@ -64,7 +64,7 @@ public class UserController {
 
     // Only Administrators can update other users
     @PutMapping(path = "/{id}", version = "1")
-    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public UserResponse update(
             @AuthenticationPrincipal AuthPrincipal principal,
             @PathVariable UUID id,
@@ -74,7 +74,7 @@ public class UserController {
 
     // Only Administrators can delete users
     @DeleteMapping(path = "/{id}", version = "1")
-    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
         userService.delete(principal, id);

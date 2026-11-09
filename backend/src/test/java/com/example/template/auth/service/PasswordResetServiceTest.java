@@ -81,7 +81,7 @@ class PasswordResetServiceTest {
         ReflectionTestUtils.setField(user, "id", USER_ID);
         user.setEmail(EMAIL);
         user.setPasswordHash("{bcrypt}old-hash");
-        user.setRole(Role.USER);
+        user.setRole(Role.MEMBER);
         return user;
     }
 

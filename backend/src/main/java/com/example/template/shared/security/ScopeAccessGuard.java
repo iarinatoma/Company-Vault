@@ -24,6 +24,7 @@ public class ScopeAccessGuard {
                 switch (principal.role()) {
                     case ADMINISTRATOR, PROJECT_OWNER, AUDITOR -> true;
                     case MEMBER -> principal.userId().equals(ownerId);
+                    case MANAGER -> false;
                 };
         if (!allowed) {
             throw new ApiException(ErrorCode.FORBIDDEN);
@@ -38,6 +39,7 @@ public class ScopeAccessGuard {
                 switch (principal.role()) {
                     case ADMINISTRATOR, PROJECT_OWNER, AUDITOR -> true;
                     case MEMBER -> false;
+                    case MANAGER -> false;
                 };
         if (!allowed) {
             throw new ApiException(ErrorCode.FORBIDDEN);

@@ -31,7 +31,7 @@ class JwtServiceTest {
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String EMAIL = "someone@example.com";
-    private static final Role ROLE = Role.USER;
+    private static final Role ROLE = Role.MEMBER;
 
     private final JwtService jwtService = new JwtService(properties(SECRET, TWO_FACTOR_TTL, CLOCK_SKEW));
 
