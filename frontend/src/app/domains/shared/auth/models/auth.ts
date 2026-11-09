@@ -1,4 +1,6 @@
-export type Role = 'ADMIN' | 'MANAGER' | 'USER';
+export type Role = 'ADMINISTRATOR' | 'PROJECT_OWNER' | 'AUDITOR' | 'MEMBER';
+
+export const ROLES: readonly Role[] = ['ADMINISTRATOR', 'PROJECT_OWNER', 'AUDITOR', 'MEMBER'];
 
 export interface User {
   readonly id: string;
@@ -46,5 +48,3 @@ export function isTokenPair(response: LoginResponse): response is TokenPair {
 }
 
 export type LoginOutcome = 'success' | 'two-factor-required';
-
-export const ROLES: readonly Role[] = ['ADMIN', 'MANAGER', 'USER'];

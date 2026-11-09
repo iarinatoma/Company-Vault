@@ -53,7 +53,7 @@ export class UserForm {
 
   protected readonly model = linkedSignal<UserFormModel>(() => ({
     email: this.user()?.email ?? '',
-    role: this.user()?.role ?? 'USER',
+    role: this.user()?.role ?? 'MEMBER',
     password: '',
   }));
 

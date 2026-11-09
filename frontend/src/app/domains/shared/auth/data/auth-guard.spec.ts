@@ -7,20 +7,21 @@ import {
 } from '@angular/router';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { provideTestBackend } from '@app-testing/test-backend';
-import { authGuard, guestGuard } from './auth-guard';
+import { Role } from '@app/shared/auth/models/auth';
+import { authGuard, guestGuard, roleGuard } from './auth-guard';
 import { AuthStore } from './auth-store';
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
 describe('auth guards', () => {
-  const route = {} as ActivatedRouteSnapshot;
+  const route = { data: {} } as unknown as ActivatedRouteSnapshot;
   const state = { url: '/home' } as RouterStateSnapshot;
 
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideRouter([]), ...provideTestBackend()] });
   });
 
-  async function logIn(): Promise<void> {
+  async function logIn(role: Role = 'MEMBER'): Promise<void> {
     const http = TestBed.inject(HttpTestingController);
     const result = TestBed.inject(AuthStore).login({ email: 'a@b.c', password: 'x' });
     http.expectOne('/api/v1/auth/login').flush({ accessToken: 't', tokenType: 'Bearer', expiresInSeconds: 1 });
@@ -28,7 +29,7 @@ describe('auth guards', () => {
     http.expectOne('/api/v1/users/me').flush({
       id: '1',
       email: 'a@b.c',
-      role: 'USER',
+      role,
       twoFactorEnabled: false,
       createdAt: '2026-08-12T00:00:00Z',
     });
@@ -53,5 +54,19 @@ describe('auth guards', () => {
   it('sends logged-in users away from the login page', async () => {
     await logIn();
     expect(TestBed.runInInjectionContext(() => guestGuard(route, state))).toBeInstanceOf(UrlTree);
+  });
+
+  it('allows users with the required role through roleGuard', async () => {
+    await logIn('ADMINISTRATOR');
+    const adminRoute = { data: { roles: ['ADMINISTRATOR'] } } as unknown as ActivatedRouteSnapshot;
+    expect(TestBed.runInInjectionContext(() => roleGuard(adminRoute, state))).toBe(true);
+  });
+
+  it('redirects users without the required role to /home', async () => {
+    await logIn('MEMBER');
+    const adminRoute = { data: { roles: ['ADMINISTRATOR'] } } as unknown as ActivatedRouteSnapshot;
+    const result = TestBed.runInInjectionContext(() => roleGuard(adminRoute, state));
+    expect(result).toBeInstanceOf(UrlTree);
+    expect((result as UrlTree).toString()).toBe('/home');
   });
 });

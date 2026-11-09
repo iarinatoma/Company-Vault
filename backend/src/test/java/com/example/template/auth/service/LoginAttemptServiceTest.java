@@ -70,7 +70,7 @@ class LoginAttemptServiceTest {
         var user = new User();
         user.setEmail("someone@example.com");
         user.setPasswordHash("{bcrypt}hash");
-        user.setRole(Role.USER);
+        user.setRole(Role.MEMBER);
         return user;
     }
 

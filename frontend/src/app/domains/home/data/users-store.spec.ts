@@ -8,7 +8,7 @@ import { UsersStore } from './users-store';
 const user = (n: number): User => ({
   id: `id-${n}`,
   email: `user${n}@example.com`,
-  role: 'USER',
+  role: 'MEMBER',
   twoFactorEnabled: false,
   createdAt: '2026-08-12T00:00:00Z',
 });
@@ -75,10 +75,10 @@ describe('UsersStore', () => {
   });
 
   it('creates a user and reloads the current page', async () => {
-    const created = store.create({ email: 'new@example.com', role: 'USER', password: 'long-password-123' });
+    const created = store.create({ email: 'new@example.com', role: 'MEMBER', password: 'long-password-123' });
     expect(store.saving()).toBe(true);
     const post = http.expectOne((r) => r.method === 'POST' && r.url === '/api/v1/users');
-    expect(post.request.body).toEqual({ email: 'new@example.com', role: 'USER', password: 'long-password-123' });
+    expect(post.request.body).toEqual({ email: 'new@example.com', role: 'MEMBER', password: 'long-password-123' });
     post.flush(user(3));
     await tick();
     http.expectOne(listUrl).flush(page([user(3)]));
@@ -89,9 +89,9 @@ describe('UsersStore', () => {
   });
 
   it('updates a user with PUT', async () => {
-    const updated = store.update('id-1', { email: 'a@example.com', role: 'MANAGER' });
+    const updated = store.update('id-1', { email: 'a@example.com', role: 'PROJECT_OWNER' });
     const put = http.expectOne((r) => r.method === 'PUT' && r.url === '/api/v1/users/id-1');
-    expect(put.request.body).toEqual({ email: 'a@example.com', role: 'MANAGER' });
+    expect(put.request.body).toEqual({ email: 'a@example.com', role: 'PROJECT_OWNER' });
     put.flush(user(1));
     await tick();
     http.expectOne(listUrl).flush(page([user(1)]));
@@ -100,7 +100,7 @@ describe('UsersStore', () => {
   });
 
   it('reports a backend error code as a message and keeps the list untouched', async () => {
-    const created = store.create({ email: 'taken@example.com', role: 'USER', password: 'long-password-123' });
+    const created = store.create({ email: 'taken@example.com', role: 'MEMBER', password: 'long-password-123' });
     http
       .expectOne((r) => r.method === 'POST')
       .flush({ code: 'EMAIL_ALREADY_IN_USE' }, { status: 409, statusText: 'Conflict' });
