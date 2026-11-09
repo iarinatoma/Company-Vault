@@ -11,7 +11,7 @@ users:
     version: 0
     email: "auth-user@test.local"
     password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
-    role: "USER"
+    role: "MEMBER"
     two_factor_enabled: false
     failed_login_attempts: 0
   - id: "aaaaaaaa-0000-0000-0000-000000000002"
@@ -20,7 +20,7 @@ users:
     version: 0
     email: "auth-2fa@test.local"
     password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
-    role: "USER"
+    role: "MEMBER"
     two_factor_enabled: true
     failed_login_attempts: 0
   - id: "aaaaaaaa-0000-0000-0000-000000000003"
@@ -29,7 +29,7 @@ users:
     version: 0
     email: "auth-locked@test.local"
     password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
-    role: "USER"
+    role: "MEMBER"
     two_factor_enabled: false
     failed_login_attempts: 0
     locked_until: "2099-01-01 00:00:00"

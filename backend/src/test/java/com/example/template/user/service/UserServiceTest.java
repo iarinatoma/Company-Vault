@@ -245,10 +245,10 @@ class UserServiceTest {
             when(userRepository.save(target)).thenReturn(target);
             when(userMapper.toResponse(target)).thenReturn(response("new@example.com"));
 
-            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("new@example.com", Role.MANAGER, null));
+            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("new@example.com", Role.PROJECT_OWNER, null));
 
             assertThat(target.getEmail()).isEqualTo("new@example.com");
-            assertThat(target.getRole()).isEqualTo(Role.MANAGER);
+            assertThat(target.getRole()).isEqualTo(Role.PROJECT_OWNER);
             assertThat(target.getPasswordHash()).isEqualTo("{bcrypt}hash");
             verify(passwordEncoder, never()).encode(any());
         }

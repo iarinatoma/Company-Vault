@@ -179,11 +179,11 @@ class UserControllerIT extends AbstractIntegrationTest {
         String token = authApi.accessTokenFor(TestUsers.ADMIN_EMAIL, TestUsers.PASSWORD);
         String email = "updated-" + UUID.randomUUID() + "@test.local";
 
-        var response = userApi.update(token, TestUsers.USER_B_ID.toString(), email, "MANAGER", null);
+        var response = userApi.update(token, TestUsers.USER_B_ID.toString(), email, "PROJECT_OWNER", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(bodyOf(response).get("email").asString()).isEqualTo(email);
-        assertThat(bodyOf(response).get("role").asString()).isEqualTo("MANAGER");
+        assertThat(bodyOf(response).get("role").asString()).isEqualTo("PROJECT_OWNER");
     }
 
     @Test

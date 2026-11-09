@@ -15,7 +15,7 @@ users:
     version: 0
     email: "users-a@test.local"
     password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
-    role: "USER"
+    role: "MEMBER"
     two_factor_enabled: false
     failed_login_attempts: 0
   - id: "bbbbbbbb-0000-0000-0000-000000000003"
@@ -24,7 +24,7 @@ users:
     version: 0
     email: "users-b@test.local"
     password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
-    role: "USER"
+    role: "MEMBER"
     two_factor_enabled: false
     failed_login_attempts: 0
 refresh_tokens: []
