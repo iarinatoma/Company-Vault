@@ -1,5 +1,6 @@
 package com.example.template.user.service;
 
+import com.example.template.auth.service.PasswordResetService;
 import com.example.template.shared.error.ApiException;
 import com.example.template.shared.error.ErrorCode;
 import com.example.template.shared.security.AuthPrincipal;
@@ -38,18 +39,21 @@ public class UserService {
     private final ScopeAccessGuard scopeAccessGuard;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final PasswordResetService passwordResetService;
 
     public UserService(
             UserRepository userRepository,
             UserMapper userMapper,
             ScopeAccessGuard scopeAccessGuard,
             PasswordEncoder passwordEncoder,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            PasswordResetService passwordResetService) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.scopeAccessGuard = scopeAccessGuard;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
+        this.passwordResetService = passwordResetService;
     }
 
     @Transactional(readOnly = true)
@@ -77,15 +81,17 @@ public class UserService {
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
-        return createUser(request.email(), request.password(), request.role());
+        return userMapper.toResponse(createUser(request.email(), request.password(), request.role()));
     }
 
     @Transactional
     public UserResponse register(RegisterUserRequest request) {
-        return createUser(request.email(), request.password(), Role.MEMBER);
+        var user = createUser(request.email(), UUID.randomUUID().toString(), Role.MEMBER);
+        passwordResetService.requestPasswordSetup(user.requireId(), user.getEmail());
+        return userMapper.toResponse(user);
     }
 
-    private UserResponse createUser(String email, String password, Role role) {
+    private User createUser(String email, String password, Role role) {
         if (userRepository.existsByEmail(email)) {
             throw new ApiException(ErrorCode.EMAIL_ALREADY_IN_USE);
         }
@@ -96,7 +102,7 @@ public class UserService {
         var saved = userRepository.save(user);
         log.info("User {} created with role {}", saved.requireId(), saved.getRole());
         eventPublisher.publishEvent(new UserCreatedEvent(saved.requireId(), saved.getEmail()));
-        return userMapper.toResponse(saved);
+        return saved;
     }
 
     @Transactional

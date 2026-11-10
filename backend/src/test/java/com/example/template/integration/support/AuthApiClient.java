@@ -67,9 +67,9 @@ public class AuthApiClient {
                 "/api/v1/auth/login", jsonEntity(Map.of("email", email, "password", password)), JsonNode.class);
     }
 
-    public ResponseEntity<JsonNode> register(String email, String password) {
+    public ResponseEntity<JsonNode> register(String email) {
         return restTemplate.postForEntity(
-                "/api/v1/auth/register", jsonEntity(Map.of("email", email, "password", password)), JsonNode.class);
+                "/api/v1/auth/register", jsonEntity(Map.of("email", email)), JsonNode.class);
     }
 
     public ResponseEntity<JsonNode> verifyTwoFactor(String challengeToken, String code) {

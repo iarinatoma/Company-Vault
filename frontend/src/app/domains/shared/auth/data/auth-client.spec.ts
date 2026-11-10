@@ -17,13 +17,11 @@ describe('AuthClient', () => {
   afterEach(() => http.verify());
 
   it('registers a new account through the public auth endpoint', async () => {
-    const registration = firstValueFrom(
-      authClient.register({ email: 'new@example.com', password: 'a-long-password' }),
-    );
+    const registration = firstValueFrom(authClient.register({ email: 'new@example.com' }));
     const request = http.expectOne('/api/v1/auth/register');
 
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ email: 'new@example.com', password: 'a-long-password' });
+    expect(request.request.body).toEqual({ email: 'new@example.com' });
     request.flush({
       id: '1',
       email: 'new@example.com',

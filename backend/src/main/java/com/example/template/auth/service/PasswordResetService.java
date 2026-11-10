@@ -2,6 +2,7 @@ package com.example.template.auth.service;
 
 import com.example.template.auth.dto.ForgotPasswordRequest;
 import com.example.template.auth.dto.ResetPasswordRequest;
+import com.example.template.auth.event.PasswordSetupRequestedEvent;
 import com.example.template.auth.event.PasswordResetRequestedEvent;
 import com.example.template.auth.model.PasswordResetToken;
 import com.example.template.auth.repository.PasswordResetTokenRepository;
@@ -26,11 +27,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Forgot-password flow. Requesting a reset answers identically whether or not the e-mail
- * belongs to an account, so the endpoint cannot be used to find out who has one. Tokens are
- * opaque 256-bit random values, stored only as SHA-256 hashes, single-use and short-lived;
- * only the newest link of a user works. A successful reset signs the user out everywhere
- * and lifts a lockout.
+ * Password setup and forgot-password flow. Requesting a reset answers identically whether or
+ * not the e-mail belongs to an account, so the endpoint cannot be used to find out who has
+ * one. Tokens are opaque 256-bit random values, stored only as SHA-256 hashes, single-use and
+ * short-lived; only the newest link of a user works. A successful reset signs the user out
+ * everywhere and lifts a lockout.
  */
 @Service
 public class PasswordResetService {
@@ -69,19 +70,34 @@ public class PasswordResetService {
             log.info("Password reset requested for unknown identifier {}", request.email());
             return;
         }
+        issuePasswordLink(user.requireId(), user.getEmail(), false);
+    }
+
+    @Transactional
+    public void requestPasswordSetup(UUID userId, String email) {
+        issuePasswordLink(userId, email, true);
+    }
+
+    private void issuePasswordLink(UUID userId, String email, boolean setup) {
         var now = Instant.now();
-        invalidateOpenTokens(user.requireId(), now);
+        invalidateOpenTokens(userId, now);
 
         String rawToken = newRawToken();
         var token = new PasswordResetToken();
-        token.setUserId(user.requireId());
+        token.setUserId(userId);
         token.setTokenHash(sha256Hex(rawToken));
         token.setExpiresAt(now.plus(properties.tokenTtl()));
         tokenRepository.save(token);
 
-        eventPublisher.publishEvent(new PasswordResetRequestedEvent(
-                user.requireId(), user.getEmail(), resetLink(rawToken), token.getExpiresAt()));
-        log.info("Password reset link issued for user {}", user.requireId());
+        if (setup) {
+            eventPublisher.publishEvent(new PasswordSetupRequestedEvent(
+                    userId, email, resetLink(rawToken), token.getExpiresAt()));
+            log.info("Password setup link issued for user {}", userId);
+        } else {
+            eventPublisher.publishEvent(new PasswordResetRequestedEvent(
+                    userId, email, resetLink(rawToken), token.getExpiresAt()));
+            log.info("Password reset link issued for user {}", userId);
+        }
     }
 
     /**
