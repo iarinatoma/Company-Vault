@@ -3,11 +3,14 @@ package com.example.template.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.template.auth.service.PasswordResetService;
 import com.example.template.shared.error.ApiException;
 import com.example.template.shared.error.ErrorCode;
 import com.example.template.shared.security.AuthPrincipal;
@@ -60,6 +63,9 @@ class UserServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private PasswordResetService passwordResetService;
 
     @InjectMocks
     private UserService userService;
@@ -207,11 +213,11 @@ class UserServiceTest {
     class RegisterTests {
 
         @Test
-        @DisplayName("creates a standard user and never lets registration choose a privileged role")
+        @DisplayName("creates a standard user with a random password and requests a setup link")
         void register_emailFree_createsUserRole() {
-            var request = new RegisterUserRequest("new@example.com", "long-password-123");
+            var request = new RegisterUserRequest("new@example.com");
             when(userRepository.existsByEmail(request.email())).thenReturn(false);
-            when(passwordEncoder.encode(request.password())).thenReturn("{bcrypt}encoded");
+            when(passwordEncoder.encode(anyString())).thenReturn("{bcrypt}encoded");
             when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
                 var saved = invocation.getArgument(0, User.class);
                 ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
@@ -226,7 +232,11 @@ class UserServiceTest {
             verify(userRepository).save(savedUser.capture());
             assertThat(savedUser.getValue().getRole()).isEqualTo(Role.MEMBER);
             assertThat(savedUser.getValue().getPasswordHash()).isEqualTo("{bcrypt}encoded");
+            verify(passwordEncoder).encode(anyString());
             verify(eventPublisher).publishEvent(any(UserCreatedEvent.class));
+            var setupUserId = ArgumentCaptor.forClass(UUID.class);
+            verify(passwordResetService).requestPasswordSetup(setupUserId.capture(), eq(request.email()));
+            assertThat(setupUserId.getValue()).isEqualTo(savedUser.getValue().requireId());
         }
     }
 

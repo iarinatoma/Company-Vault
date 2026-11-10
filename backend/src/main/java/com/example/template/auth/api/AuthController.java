@@ -49,6 +49,7 @@ public class AuthController {
     @PostMapping(path = "/register", version = "1")
     @PreAuthorize("permitAll()")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create an account and send a password setup link")
     public UserResponse register(@Valid @RequestBody RegisterUserRequest request) {
         return userService.register(request);
     }

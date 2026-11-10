@@ -36,6 +36,32 @@ in production. Change or remove it before deploying anywhere real.
 
 Swagger UI (dev/test only): http://localhost:8080/swagger-ui.html
 
+### Account registration and email
+
+Public registration accepts only an e-mail address (`POST /api/v1/auth/register` with
+`{"email":"you@example.com"}`). It creates a standard member account and sends a one-time
+password setup link; the user chooses their password through the same page used for password
+resets. The link expires after the configured password-reset token TTL and can be used once.
+
+For local development, email sending is enabled and directed to Mailpit instead of real
+recipients. Start the local email catcher from the `backend` directory:
+
+```bash
+docker compose up -d mailpit
+```
+
+Mailpit's inbox is available at http://localhost:8025. The backend submits mail through
+`localhost:1025`; signup messages appear in Mailpit, where you can open the one-time link and set
+the new account's password. No domain, provider account, or SMTP credentials are needed for
+local testing.
+
+To disable local email capture, set `EMAIL_ENABLED=false`. To send real email in a deployed
+environment, use an SMTP provider with a verified sender domain, and configure
+`EMAIL_ENABLED=true`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`,
+`SMTP_STARTTLS`, `EMAIL_FROM`, and `PASSWORD_SETUP_LINK_BASE_URL` in the deployment environment.
+Never commit provider credentials. The frontend submits only the email address and provides
+the password setup page at the configured link URL.
+
 ## Commands
 
 ```bash

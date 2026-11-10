@@ -17,7 +17,6 @@ export interface LoginCredentials {
 
 export interface RegisterCredentials {
   readonly email: string;
-  readonly password: string;
 }
 
 export interface ForgotPasswordRequest {

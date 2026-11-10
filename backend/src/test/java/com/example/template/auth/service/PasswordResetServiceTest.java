@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.template.auth.dto.ForgotPasswordRequest;
 import com.example.template.auth.dto.ResetPasswordRequest;
+import com.example.template.auth.event.PasswordSetupRequestedEvent;
 import com.example.template.auth.event.PasswordResetRequestedEvent;
 import com.example.template.auth.model.PasswordResetToken;
 import com.example.template.auth.repository.PasswordResetTokenRepository;
@@ -134,6 +135,37 @@ class PasswordResetServiceTest {
             verify(eventPublisher).publishEvent(event.capture());
 
             String link = event.getValue().resetLink();
+            assertThat(link).startsWith(LINK_BASE_URL + "#token=");
+            String rawToken = link.substring((LINK_BASE_URL + "#token=").length());
+            assertThat(rawToken).isNotBlank();
+            assertThat(savedToken.getValue().getTokenHash()).isEqualTo(sha256Hex(rawToken));
+            assertThat(savedToken.getValue().getTokenHash()).doesNotContain(rawToken);
+            assertThat(savedToken.getValue().getUserId()).isEqualTo(USER_ID);
+            assertThat(savedToken.getValue().getExpiresAt()).isAfterOrEqualTo(before.plus(TOKEN_TTL));
+            assertThat(event.getValue().email()).isEqualTo(EMAIL);
+            assertThat(olderToken.getUsedAt()).isNotNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("requestPasswordSetup")
+    class RequestPasswordSetupTests {
+
+        @Test
+        @DisplayName("stores only the token hash and publishes a one-time setup link")
+        void requestPasswordSetup_storesHashAndPublishesLink() {
+            var olderToken = token(Instant.now().plus(Duration.ofMinutes(10)), null);
+            when(tokenRepository.findAllByUserIdAndUsedAtIsNull(USER_ID)).thenReturn(List.of(olderToken));
+            var before = Instant.now();
+
+            passwordResetService.requestPasswordSetup(USER_ID, EMAIL);
+
+            var savedToken = ArgumentCaptor.forClass(PasswordResetToken.class);
+            verify(tokenRepository).save(savedToken.capture());
+            var event = ArgumentCaptor.forClass(PasswordSetupRequestedEvent.class);
+            verify(eventPublisher).publishEvent(event.capture());
+
+            String link = event.getValue().setupLink();
             assertThat(link).startsWith(LINK_BASE_URL + "#token=");
             String rawToken = link.substring((LINK_BASE_URL + "#token=").length());
             assertThat(rawToken).isNotBlank();

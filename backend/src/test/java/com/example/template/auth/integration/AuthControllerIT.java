@@ -69,7 +69,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
     void register_anonymous_returnsCreatedUser() {
         String email = "registered-" + UUID.randomUUID() + "@test.local";
 
-        var response = authApi.register(email, "brand-new-password-1");
+        var response = authApi.register(email);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         var body = bodyOf(response);
@@ -82,33 +82,10 @@ class AuthControllerIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("registration answers 409 EMAIL_ALREADY_IN_USE for a duplicate email")
     void register_duplicateEmail_returns409() {
-        var response = authApi.register(TestUsers.AUTH_USER_EMAIL, "brand-new-password-1");
+        var response = authApi.register(TestUsers.AUTH_USER_EMAIL);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(bodyOf(response).get("code").asString()).isEqualTo("EMAIL_ALREADY_IN_USE");
-    }
-
-    @Test
-    @DisplayName("registration rejects passwords shorter than 12 characters")
-    void register_shortPassword_returns400() {
-        var response = authApi.register("short-password-" + UUID.randomUUID() + "@test.local", "too-short");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(bodyOf(response).get("code").asString()).isEqualTo("VALIDATION_FAILED");
-    }
-    
-
-    @Test
-    @DisplayName("registration rejects long but weak passwords (no digit, or a well-known password)")
-    void register_weakPassword_returns400WithPasswordFieldError() {
-        for (String weak : new String[] {"only-letters-no-digits", "password1234"}) {
-            var response = authApi.register("weak-password-" + UUID.randomUUID() + "@test.local", weak);
-
-            assertThat(response.getStatusCode()).as(weak).isEqualTo(HttpStatus.BAD_REQUEST);
-            var body = bodyOf(response);
-            assertThat(body.get("code").asString()).isEqualTo("VALIDATION_FAILED");
-            assertThat(body.get("errors").has("password")).as(weak).isTrue();
-        }
     }
 
     @Test
