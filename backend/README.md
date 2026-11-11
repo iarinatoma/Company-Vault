@@ -53,7 +53,8 @@ docker compose up -d mailpit
 Mailpit's inbox is available at http://localhost:8025. The backend submits mail through
 `localhost:1025`; signup messages appear in Mailpit, where you can open the one-time link and set
 the new account's password. No domain, provider account, or SMTP credentials are needed for
-local testing.
+local testing. Mailpit is configured to start automatically when Docker starts and stop when
+Docker stops.
 
 To disable local email capture, set `EMAIL_ENABLED=false`. To send real email in a deployed
 environment, use an SMTP provider with a verified sender domain, and configure
