@@ -36,6 +36,19 @@ in production. Change or remove it before deploying anywhere real.
 
 Swagger UI (dev/test only): http://localhost:8080/swagger-ui.html
 
+
+### Master key (encryption)
+
+The master key encrypts all data keys and is never stored in the database or the repository.
+It is read, in this order, from:
+
+1. the environment variable `ENCRYPTION_KEY` (or the git-ignored `.env` file locally), or
+2. a mounted secret file named `ENCRYPTION_KEY` in `SECRETS_DIR` (default `/run/secrets/`,
+   where Docker secrets are mounted).
+
+The value must be base64 of exactly 32 random bytes (AES-256); otherwise the application refuses
+to start. Generate one with: `openssl rand -base64 32`.
+
 ### Account registration and email
 
 Public registration accepts only an e-mail address (`POST /api/v1/auth/register` with
