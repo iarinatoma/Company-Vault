@@ -1,0 +1,28 @@
+<section class="rounded-xl border border-amber-300 bg-amber-50 p-6 shadow-sm" aria-labelledby="master-key-backup-title">
+  <h2 id="master-key-backup-title" class="text-sm font-semibold uppercase tracking-wide text-amber-950" i18n="@@adminKeyBackup.title">
+    Master key recovery
+  </h2>
+  <p class="mt-2 text-sm text-amber-950" i18n="@@adminKeyBackup.description">
+    Download a backup of the currently configured master key. It can decrypt the wrapped data keys for every vault.
+  </p>
+  <p class="mt-2 text-sm font-medium text-amber-950" i18n="@@adminKeyBackup.warning">
+    Store the downloaded file offline in an encrypted, access-controlled location. Never commit it, e-mail it, or store it beside the database.
+  </p>
+  <button
+    type="button"
+    class="mt-4 rounded-md bg-amber-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-60"
+    [disabled]="downloading()"
+    (click)="download()"
+  >
+    @if (downloading()) {
+      <ng-container i18n="@@adminKeyBackup.downloading">Downloading…</ng-container>
+    } @else {
+      <ng-container i18n="@@adminKeyBackup.download">Download master key backup</ng-container>
+    }
+  </button>
+  @if (error()) {
+    <p class="mt-3 text-sm text-red-800" role="alert" i18n="@@adminKeyBackup.error">
+      The backup could not be downloaded. Please try again.
+    </p>
+  }
+</section>

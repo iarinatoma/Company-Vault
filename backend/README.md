@@ -49,6 +49,31 @@ It is read, in this order, from:
 The value must be base64 of exactly 32 random bytes (AES-256); otherwise the application refuses
 to start. Generate one with: `openssl rand -base64 32`.
 
+#### Master-key backup and recovery
+
+The administrator dashboard provides a **Download master key backup** action. It downloads the
+currently configured key as a Base64 text file accepted directly as `ENCRYPTION_KEY`. The
+download endpoint is restricted to the `ADMINISTRATOR` role and sends no-cache headers; the
+application never stores another copy in the database.
+
+Treat this file as a credential with access to **every vault**: keep it in a separate, encrypted,
+access-controlled offline backup location, restrict who can retrieve it, and never put it in Git,
+email, logs, or beside the database backup. Create and verify a protected copy when provisioning a
+key and again after any planned key rotation.
+
+To recover after losing the deployed copy, restore the **exact same** key from the protected
+backup as `ENCRYPTION_KEY` (or as the mounted secret file) and restore the corresponding database
+backup, then restart the application. Without that exact key, the wrapped DEKs in `data_keys`
+cannot be decrypted and **all secrets are permanently unreadable**. The admin download can only
+back up the key currently loaded by a running application; it cannot recover an already-lost key.
+
+Each vault has a separate DEK. Deleting a DEK from the live database makes only that vault's
+secrets unreadable; the master-key backup alone cannot restore it. A separate database backup
+containing that DEK may restore it, so protect database backups as sensitive encrypted data too.
+Do not delete `data_keys` rows as a recovery or rotation procedure. A master-key rotation must
+re-wrap every DEK with the new key before replacing the configured key; simply changing
+`ENCRYPTION_KEY` makes all vaults unreadable.
+
 ### Account registration and email
 
 Public registration accepts only an e-mail address (`POST /api/v1/auth/register` with
