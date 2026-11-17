@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.template.shared.config.AppSecurityProperties;
+import com.example.template.shared.config.KeyRotationProperties;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
@@ -13,29 +14,38 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The master-key encryptor: it wraps the per-vault data keys and the TOTP secrets. Covers
- * crypto round trips, nonce freshness, tamper detection and the error contract of
- * {@link AeadEncryptor} (bad input is always an IllegalStateException).
+ * crypto round trips, nonce freshness, tamper detection, the error contract of
+ * {@link AeadEncryptor} (bad input is always an IllegalStateException) and the previous-key
+ * fallback used during a master key rotation.
  */
 @DisplayName("AesGcmEncryptor (master key)")
 class AesGcmEncryptorTest {
 
     private static final byte[] KEY = AesGcm.newKey();
+    private static final byte[] OLD_KEY = AesGcm.newKey();
 
     private final AesGcmEncryptor encryptor = encryptorWith(KEY);
 
     private static AesGcmEncryptor encryptorWith(byte[] key) {
-        return new AesGcmEncryptor(new AppSecurityProperties(
-                new AppSecurityProperties.Jwt(
-                        "unit-test-secret-with-at-least-32-bytes",
-                        Duration.ofMinutes(15),
-                        Duration.ofMinutes(5),
-                        Duration.ofSeconds(60)),
-                new AppSecurityProperties.RefreshCookie("/api/v1/auth", "Lax"),
-                new AppSecurityProperties.RefreshToken(Duration.ofDays(30), Duration.ofDays(7)),
-                new AppSecurityProperties.Lockout(5, Duration.ofMinutes(15)),
-                new AppSecurityProperties.RateLimit(10, Duration.ofMinutes(1)),
-                new AppSecurityProperties.Cors(List.of("https://app.example.com")),
-                new AppSecurityProperties.Encryption(Base64.getEncoder().encodeToString(key))));
+        return encryptorWith(key, null);
+    }
+
+    private static AesGcmEncryptor encryptorWith(byte[] key, byte[] previousKey) {
+        String previous = previousKey == null ? null : Base64.getEncoder().encodeToString(previousKey);
+        return new AesGcmEncryptor(
+                new AppSecurityProperties(
+                        new AppSecurityProperties.Jwt(
+                                "unit-test-secret-with-at-least-32-bytes",
+                                Duration.ofMinutes(15),
+                                Duration.ofMinutes(5),
+                                Duration.ofSeconds(60)),
+                        new AppSecurityProperties.RefreshCookie("/api/v1/auth", "Lax"),
+                        new AppSecurityProperties.RefreshToken(Duration.ofDays(30), Duration.ofDays(7)),
+                        new AppSecurityProperties.Lockout(5, Duration.ofMinutes(15)),
+                        new AppSecurityProperties.RateLimit(10, Duration.ofMinutes(1)),
+                        new AppSecurityProperties.Cors(List.of("https://app.example.com")),
+                        new AppSecurityProperties.Encryption(Base64.getEncoder().encodeToString(key))),
+                new KeyRotationProperties(previous));
     }
 
     @Test
@@ -115,5 +125,39 @@ class AesGcmEncryptorTest {
     void formatIsCompatibleWithAesGcm() {
         assertThat(AesGcm.decrypt(KEY, encryptor.encrypt("shared format"))).isEqualTo("shared format");
         assertThat(encryptor.decrypt(AesGcm.encrypt(KEY, "shared format"))).isEqualTo("shared format");
+    }
+
+    @Test
+    @DisplayName("during a rotation, data under the previous master key stays readable")
+    void previousKey_stillDecryptsOldData() {
+        String underOldKey = encryptorWith(OLD_KEY).encrypt("totp-secret");
+        var rotating = encryptorWith(KEY, OLD_KEY);
+
+        assertThat(rotating.decrypt(underOldKey)).isEqualTo("totp-secret");
+    }
+
+    @Test
+    @DisplayName("during a rotation, new data is always encrypted with the current key")
+    void duringRotation_newDataUsesCurrentKey() {
+        var rotating = encryptorWith(KEY, OLD_KEY);
+
+        String encrypted = rotating.encrypt("fresh");
+
+        assertThat(encryptor.decrypt(encrypted)).isEqualTo("fresh");
+        assertThatThrownBy(() -> encryptorWith(OLD_KEY).decrypt(encrypted))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("reEncrypt moves a value from the previous to the current master key")
+    void reEncrypt_movesValueToCurrentKey() {
+        String underOldKey = encryptorWith(OLD_KEY).encrypt("wrapped-dek");
+        var rotating = encryptorWith(KEY, OLD_KEY);
+
+        String moved = rotating.reEncrypt(underOldKey);
+
+        assertThat(encryptor.decrypt(moved)).isEqualTo("wrapped-dek");
+        assertThatThrownBy(() -> encryptorWith(OLD_KEY).decrypt(moved))
+                .isInstanceOf(IllegalStateException.class);
     }
 }
