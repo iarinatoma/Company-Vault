@@ -6,10 +6,11 @@ import { UserInput } from '@app/home/data/users-client';
 import { UsersStore } from '@app/home/data/users-store';
 import { ConfirmDialog } from '@app/home/ui/confirm-dialog/confirm-dialog';
 import { UserForm } from '@app/home/ui/user-form/user-form';
+import { MasterKeyBackup } from './master-key-backup';
 
 @Component({
   selector: 'app-home',
-  imports: [DatePipe, UserForm, ConfirmDialog],
+  imports: [DatePipe, UserForm, ConfirmDialog, MasterKeyBackup],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',
 })
