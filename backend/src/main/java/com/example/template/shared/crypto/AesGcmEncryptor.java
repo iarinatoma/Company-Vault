@@ -54,7 +54,8 @@ public class AesGcmEncryptor implements AeadEncryptor {
                     Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, decoded, 0, NONCE_LENGTH_BYTES));
             byte[] plaintext = cipher.doFinal(decoded, NONCE_LENGTH_BYTES, decoded.length - NONCE_LENGTH_BYTES);
             return new String(plaintext, StandardCharsets.UTF_8);
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException | IllegalArgumentException e) {
+            // Not base64, or shorter than a nonce: malformed input fails like tampered input.
             throw new IllegalStateException("AES-GCM decryption failed", e);
         }
     }
