@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Envelope encryption: one data encryption key (DEK) per vault/project. The DEK itself is
+         stored only wrapped (AES-256-GCM encrypted with the master key); the master key never
+         touches the database. resource_type + resource_id point at the vault/project, so there
+         is no foreign key on resource_id. -->
+    <changeSet id="2026-11-16-21-00-create-data-keys" author="iarina-toma">
+        <createTable tableName="data_keys">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_type" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="wrapped_key" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="data_keys"
+                             columnNames="resource_type, resource_id"
+                             constraintName="uq_data_keys_resource"/>
+    </changeSet>
+
+</databaseChangeLog>

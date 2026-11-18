@@ -1,0 +1,61 @@
+# Fixtures for AccessControllerIT only — datasets are per test class, never shared.
+# All password hashes are bcrypt-12 of TestUsers.PASSWORD ("Password123!").
+# Child tables are listed so the CLEAN_INSERT seeding deletes them first.
+users:
+  - id: "cccccccc-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "access-writer@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "MEMBER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "cccccccc-0000-0000-0000-000000000002"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "access-outsider@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "MEMBER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "cccccccc-0000-0000-0000-000000000003"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "access-auditor@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "AUDITOR"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "cccccccc-0000-0000-0000-000000000004"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "access-admin@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "ADMINISTRATOR"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+access_grants:
+  - id: "dddddddd-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    user_id: "cccccccc-0000-0000-0000-000000000001"
+    resource_type: "VAULT"
+    resource_id: "eeeeeeee-0000-0000-0000-000000000001"
+    access_level: "WRITE"
+  - id: "dddddddd-0000-0000-0000-000000000002"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    user_id: "cccccccc-0000-0000-0000-000000000003"
+    resource_type: "VAULT"
+    resource_id: "eeeeeeee-0000-0000-0000-000000000001"
+    access_level: "READ"
+refresh_tokens: []
+recovery_codes: []
+consumed_two_factor_tokens: []
+password_reset_tokens: []

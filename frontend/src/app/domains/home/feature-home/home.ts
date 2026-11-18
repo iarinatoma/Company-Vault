@@ -19,9 +19,9 @@ export class Home implements OnInit {
 
   protected readonly canList = computed(() => {
     const role = this.user()?.role;
-    return role === 'ADMIN' || role === 'MANAGER';
+    return role === 'ADMINISTRATOR' || role === 'PROJECT_OWNER';
   });
-  protected readonly canWrite = computed(() => this.user()?.role === 'ADMIN');
+  protected readonly canWrite = computed(() => this.user()?.role === 'ADMINISTRATOR');
 
   protected readonly editing = signal<User | 'new' | null>(null);
   protected readonly editTarget = computed(() => {

@@ -2,6 +2,7 @@ package com.example.template.infra.notification;
 
 import com.example.template.auth.event.AccountLockedEvent;
 import com.example.template.auth.event.PasswordResetRequestedEvent;
+import com.example.template.auth.event.PasswordSetupRequestedEvent;
 import com.example.template.user.event.UserCreatedEvent;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -40,5 +41,15 @@ public class NotificationEventListeners {
                         + event.resetLink()
                         + "\n\nThe link works once and expires at " + event.expiresAt() + ".\n"
                         + "If you did not ask for this, ignore this e-mail — your password stays unchanged.");
+    }
+
+    @TransactionalEventListener
+    public void onPasswordSetupRequested(PasswordSetupRequestedEvent event) {
+        notificationPort.sendEmail(
+                event.email(),
+                "Set your Company Vault password",
+                "Your account has been created. Open this one-time link to choose a password:\n"
+                        + event.setupLink()
+                        + "\n\nThe link works once and expires at " + event.expiresAt() + ".");
     }
 }

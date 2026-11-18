@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="2026-11-09-12-00-rename-roles" author="andreea">
+        <update tableName="users">
+            <column name="role" value="MEMBER"/>
+            <where>role = 'USER'</where>
+        </update>
+        <update tableName="users">
+            <column name="role" value="ADMINISTRATOR"/>
+            <where>role = 'ADMIN'</where>
+        </update>
+        <update tableName="users">
+            <column name="role" value="PROJECT_OWNER"/>
+            <where>role = 'MANAGER'</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

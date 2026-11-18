@@ -1,19 +1,59 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  CanActivateFn,
+  Router,
+  RouterStateSnapshot,
+  UrlTree,
+} from '@angular/router';
+import { Role } from '@app/shared/auth/models/auth';
 import { AuthStore } from './auth-store';
 
-/** Protects routes: anonymous users are sent to the login page and return afterwards. */
-export const authGuard: CanActivateFn = (_route, state) => {
-  const auth = inject(AuthStore);
+export const authGuard: CanActivateFn = (
+  _route: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot,
+): boolean | UrlTree => {
+  void _route;
+  const authStore = inject(AuthStore);
   const router = inject(Router);
-  return auth.isLoggedIn()
-    ? true
-    : router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+
+  if (authStore.isLoggedIn()) {
+    return true;
+  }
+
+  return router.createUrlTree(['/login'], {
+    queryParams: { returnUrl: state.url },
+  });
 };
 
-/** The login page itself is only for anonymous users. */
-export const guestGuard: CanActivateFn = () => {
-  const auth = inject(AuthStore);
+export const guestGuard: CanActivateFn = (): boolean | UrlTree => {
+  const authStore = inject(AuthStore);
   const router = inject(Router);
-  return auth.isLoggedIn() ? router.createUrlTree(['/']) : true;
+
+  if (!authStore.isLoggedIn()) {
+    return true;
+  }
+
+  return router.createUrlTree(['/home']);
+};
+
+export const roleGuard: CanActivateFn = (
+  route: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot,
+): boolean | UrlTree => {
+  const authStore = inject(AuthStore);
+  const router = inject(Router);
+
+  if (!authStore.isLoggedIn()) {
+    return router.createUrlTree(['/login'], {
+      queryParams: { returnUrl: state.url },
+    });
+  }
+
+  const allowedRoles = route.data['roles'] as Role[] | undefined;
+  if (!allowedRoles || allowedRoles.length === 0 || authStore.hasRole(allowedRoles)) {
+    return true;
+  }
+
+  return router.createUrlTree(['/home']);
 };

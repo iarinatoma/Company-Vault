@@ -1,10 +1,11 @@
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { form, FormField, maxLength, minLength, required, schema, submit } from '@angular/forms/signals';
+import { form, FormField, required, schema, submit } from '@angular/forms/signals';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthClient } from '@app/shared/auth/data/auth-client';
+import { passwordPolicy } from '@app/shared/auth/util/password-policy';
 
 interface ResetPasswordFormModel {
   password: string;
@@ -13,8 +14,7 @@ interface ResetPasswordFormModel {
 
 const resetPasswordSchema = schema<ResetPasswordFormModel>((path) => {
   required(path.password);
-  minLength(path.password, 12);
-  maxLength(path.password, 128);
+  passwordPolicy(path.password);
   required(path.confirmPassword);
 });
 

@@ -36,6 +36,66 @@ in production. Change or remove it before deploying anywhere real.
 
 Swagger UI (dev/test only): http://localhost:8080/swagger-ui.html
 
+
+### Master key (encryption)
+
+The master key encrypts all data keys and is never stored in the database or the repository.
+It is read, in this order, from:
+
+1. the environment variable `ENCRYPTION_KEY` (or the git-ignored `.env` file locally), or
+2. a mounted secret file named `ENCRYPTION_KEY` in `SECRETS_DIR` (default `/run/secrets/`,
+   where Docker secrets are mounted).
+
+The value must be base64 of exactly 32 random bytes (AES-256); otherwise the application refuses
+to start. Generate one with: `openssl rand -base64 32`.
+
+### Account registration and email
+
+Public registration accepts only an e-mail address (`POST /api/v1/auth/register` with
+`{"email":"you@example.com"}`). It creates a standard member account and sends a one-time
+password setup link; the user chooses their password through the same page used for password
+resets. The link expires after the configured password-reset token TTL and can be used once.
+
+For local development, email sending is enabled and directed to Mailpit instead of real
+recipients. Start the local email catcher from the `backend` directory:
+
+```bash
+docker compose up -d mailpit
+```
+
+Mailpit's inbox is available at http://localhost:8025. The backend submits mail through
+`localhost:1025`; signup messages appear in Mailpit, where you can open the one-time link and set
+the new account's password. No domain, provider account, or SMTP credentials are needed for
+local testing. Mailpit is configured to start automatically when Docker starts and stop when
+Docker stops.
+
+To disable local email capture, set `EMAIL_ENABLED=false`. To send real email in a deployed
+environment, use an SMTP provider with a verified sender domain, and configure
+`EMAIL_ENABLED=true`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`,
+`SMTP_STARTTLS`, `EMAIL_FROM`, and `PASSWORD_SETUP_LINK_BASE_URL` in the deployment environment.
+Never commit provider credentials. The frontend submits only the email address and provides
+the password setup page at the configured link URL.
+### Key rotation
+
+**Master key.** Only the wrapped DEKs and the TOTP secrets are encrypted directly with the master
+key, so rotating it never touches the secrets themselves:
+
+1. Generate a new key: `openssl rand -base64 32`.
+2. Set `ENCRYPTION_KEY` to the new key and `ENCRYPTION_KEY_PREVIOUS` to the old one, then
+   restart. New data uses the new key; data still under the old key stays readable.
+3. As an administrator call `POST /api/v1/keys/rotate-master` (Swagger UI). It re-encrypts every
+   DEK and TOTP secret with the new key in one transaction and returns how many it moved.
+4. Remove `ENCRYPTION_KEY_PREVIOUS` and restart. Back up the new key; the old one can be destroyed.
+
+If step 3 fails because a value opens with neither key, nothing is changed: keep both keys set
+and investigate before removing the old one.
+
+**Data key (DEK) of one vault.** `EnvelopeEncryption.rotateKey(vault, ciphertexts)` creates a new
+DEK, re-encrypts the vault's secrets from the old DEK to the new one and stores the new DEK
+wrapped with the master key. The caller saves the returned ciphertexts in the same transaction, so
+a failure keeps the old DEK. Rotate a vault's DEK when someone with access to it leaves or a
+compromise is suspected. There is no endpoint yet: the secrets feature calls it, because only it
+knows the vault's ciphertexts.
 ## Commands
 
 ```bash

@@ -10,4 +10,12 @@ public interface AeadEncryptor {
 
     /** Reverses {@link #encrypt}; throws {@code IllegalStateException} on tampered input. */
     String decrypt(String encrypted);
+
+    /**
+     * Decrypts with whichever master key still opens the value and encrypts it again with the
+     * current one — the building block of master key rotation.
+     */
+    default String reEncrypt(String encrypted) {
+        return encrypt(decrypt(encrypted));
+    }
 }
