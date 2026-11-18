@@ -6,6 +6,7 @@ import com.example.template.shared.crypto.AeadEncryptor;
 import com.example.template.shared.crypto.AesGcm;
 import com.example.template.shared.security.ResourceRef;
 import java.util.Base64;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
  * reveals nothing, and deleting a DEK makes the vault's secrets unreadable for good.
  *
  * <p>Usage: {@link #ensureKey} when a vault is created, {@link #encrypt}/{@link #decrypt} for its
- * secrets, {@link #deleteKey} when it is deleted. Access checks happen before, in the caller.
+ * secrets, {@link #rotateKey} to give it a fresh DEK, {@link #deleteKey} when it is deleted.
+ * Access checks happen before, in the caller.
  */
 @Service
 public class EnvelopeEncryption {
@@ -60,6 +62,31 @@ public class EnvelopeEncryption {
         return AesGcm.decrypt(dekOf(resource), encrypted);
     }
 
+    /**
+     * DEK rotation: creates a new DEK for the resource, re-encrypts the given ciphertexts (all
+     * secrets of the vault) from the old DEK to the new one and stores the new DEK, wrapped with
+     * the master key, in place of the old. Returns the re-encrypted values in the same order;
+     * the caller saves them in the same transaction, so a rollback keeps the old DEK and the old
+     * ciphertexts together. Afterwards the old DEK is gone for good.
+     */
+    @Transactional
+    public List<String> rotateKey(ResourceRef resource, List<String> ciphertexts) {
+        DataKey dataKey = dataKeyOf(resource);
+        byte[] oldDek = unwrap(dataKey);
+        byte[] newDek = AesGcm.newKey();
+        List<String> reEncrypted = ciphertexts.stream()
+                .map(ciphertext -> AesGcm.encrypt(newDek, AesGcm.decrypt(oldDek, ciphertext)))
+                .toList();
+        dataKey.setWrappedKey(masterKey.encrypt(Base64.getEncoder().encodeToString(newDek)));
+        dataKeyRepository.save(dataKey);
+        log.info(
+                "Data key rotated for {} {}; {} values re-encrypted",
+                resource.type(),
+                resource.id(),
+                reEncrypted.size());
+        return reEncrypted;
+    }
+
     /** Removes the resource's DEK — everything encrypted with it becomes unreadable. */
     @Transactional
     public void deleteKey(ResourceRef resource) {
@@ -67,12 +94,19 @@ public class EnvelopeEncryption {
         log.info("Data key deleted for {} {}", resource.type(), resource.id());
     }
 
-    /** Unwraps the DEK with the master key; it exists in plain form only in memory, never in logs. */
     private byte[] dekOf(ResourceRef resource) {
-        var dataKey = dataKeyRepository
+        return unwrap(dataKeyOf(resource));
+    }
+
+    private DataKey dataKeyOf(ResourceRef resource) {
+        return dataKeyRepository
                 .findByResourceTypeAndResourceId(resource.type(), resource.id())
                 .orElseThrow(() -> new IllegalStateException(
                         "No data key for " + resource.type() + " " + resource.id()));
+    }
+
+    /** Unwraps the DEK with the master key; it exists in plain form only in memory, never in logs. */
+    private byte[] unwrap(DataKey dataKey) {
         return Base64.getDecoder().decode(masterKey.decrypt(dataKey.getWrappedKey()));
     }
 }
