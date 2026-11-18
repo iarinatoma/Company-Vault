@@ -75,7 +75,27 @@ environment, use an SMTP provider with a verified sender domain, and configure
 `SMTP_STARTTLS`, `EMAIL_FROM`, and `PASSWORD_SETUP_LINK_BASE_URL` in the deployment environment.
 Never commit provider credentials. The frontend submits only the email address and provides
 the password setup page at the configured link URL.
+### Key rotation
 
+**Master key.** Only the wrapped DEKs and the TOTP secrets are encrypted directly with the master
+key, so rotating it never touches the secrets themselves:
+
+1. Generate a new key: `openssl rand -base64 32`.
+2. Set `ENCRYPTION_KEY` to the new key and `ENCRYPTION_KEY_PREVIOUS` to the old one, then
+   restart. New data uses the new key; data still under the old key stays readable.
+3. As an administrator call `POST /api/v1/keys/rotate-master` (Swagger UI). It re-encrypts every
+   DEK and TOTP secret with the new key in one transaction and returns how many it moved.
+4. Remove `ENCRYPTION_KEY_PREVIOUS` and restart. Back up the new key; the old one can be destroyed.
+
+If step 3 fails because a value opens with neither key, nothing is changed: keep both keys set
+and investigate before removing the old one.
+
+**Data key (DEK) of one vault.** `EnvelopeEncryption.rotateKey(vault, ciphertexts)` creates a new
+DEK, re-encrypts the vault's secrets from the old DEK to the new one and stores the new DEK
+wrapped with the master key. The caller saves the returned ciphertexts in the same transaction, so
+a failure keeps the old DEK. Rotate a vault's DEK when someone with access to it leaves or a
+compromise is suspected. There is no endpoint yet: the secrets feature calls it, because only it
+knows the vault's ciphertexts.
 ## Commands
 
 ```bash
