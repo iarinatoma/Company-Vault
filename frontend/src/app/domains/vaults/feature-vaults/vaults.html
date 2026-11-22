@@ -1,0 +1,59 @@
+<section class="space-y-6">
+  <header class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight" i18n="@@vaults.title">Vaults</h1>
+      <p class="mt-1 text-sm text-slate-500" i18n="@@vaults.subtitle">The vaults you can access.</p>
+    </div>
+    @if (isAdmin()) {
+      <button
+        type="button"
+        class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+        (click)="openCreate()"
+        i18n="@@vaults.new"
+      >New vault</button>
+    }
+  </header>
+
+  @if (isAdmin()) {
+    <p class="rounded-md bg-slate-100 px-3 py-2 text-xs text-slate-600" i18n="@@vaults.adminNote">
+      As an administrator you see every vault's name and description, but not its secrets unless you have access.
+    </p>
+  }
+
+  <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+    @if (store.loading()) {
+      <p class="px-6 py-8 text-sm text-slate-500" i18n="@@vaults.loading">Loading…</p>
+    } @else if (store.loadError(); as message) {
+      <p class="px-6 py-8 text-sm text-red-700" role="alert">{{ message }}</p>
+    } @else if (store.items().length === 0) {
+      <p class="px-6 py-8 text-sm text-slate-500" i18n="@@vaults.empty">No vaults yet.</p>
+    } @else {
+      <ul class="divide-y divide-slate-200">
+        @for (vault of store.items(); track vault.id) {
+          <li class="flex items-center justify-between gap-4 px-6 py-4">
+            <div class="min-w-0">
+              <p class="truncate font-medium text-slate-900">{{ vault.name }}</p>
+              @if (vault.description) {
+                <p class="truncate text-sm text-slate-500">{{ vault.description }}</p>
+              }
+              <p class="mt-1 text-xs text-slate-400">{{ vault.type }} · {{ vault.createdAt | date: 'mediumDate' }}</p>
+            </div>
+            <span class="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+              {{ vault.accessLevel }}
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>
+
+@if (creating()) {
+  <app-vault-form
+    [owners]="owners()"
+    [saving]="store.saving()"
+    [error]="store.saveError()"
+    (submitted)="create($event)"
+    (closed)="creating.set(false)"
+  />
+}
