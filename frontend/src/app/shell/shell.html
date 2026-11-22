@@ -13,6 +13,13 @@
           i18n="@@nav.home"
         >Home</a>
 
+        <a
+          routerLink="/vaults"
+          routerLinkActive="text-indigo-600"
+          class="font-medium text-slate-600 hover:text-slate-900"
+          i18n="@@nav.vaults"
+        >Vaults</a>
+
         @if (auth.hasRole(['PROJECT_OWNER', 'ADMINISTRATOR'])) {
           <a
             routerLink="/home"
