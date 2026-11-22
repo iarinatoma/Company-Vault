@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.template.access.dto.AccessLevelResponse;
+import java.util.Set;
+import java.util.stream.Collectors;
+import com.example.template.shared.security.ResourceType;
 
 /**
  * The central permission check for vaults, projects, folders and secrets. Every service method
@@ -69,6 +72,21 @@ public class AccessControl {
                     resource.id());
             throw new ApiException(ErrorCode.FORBIDDEN);
         }
+    }
+
+        /**
+     * The ids of all resources of one type the caller can reach with at least {@code minimum} —
+     * e.g. the vaults to list for a member. Same role rules as {@link #levelOf}: an auditor gets none.
+     */
+    @Transactional(readOnly = true)
+    public Set<UUID> resourceIdsOf(AuthPrincipal principal, ResourceType type, AccessLevel minimum) {
+        if (principal.role() == Role.AUDITOR) {
+            return Set.of();
+        }
+        return accessGrantRepository.findAllByUserIdAndResourceType(principal.userId(), type).stream()
+                .filter(grant -> grant.getAccessLevel().includes(minimum))
+                .map(AccessGrant::getResourceId)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     /**

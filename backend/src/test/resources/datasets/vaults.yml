@@ -1,0 +1,67 @@
+# Fixtures for VaultControllerIT only — datasets are per test class, never shared.
+# All password hashes are bcrypt-12 of TestUsers.PASSWORD ("Password123!").
+# Child tables are listed so the CLEAN_INSERT seeding deletes them first.
+users:
+  - id: "f1f1f1f1-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "vaults-admin@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "ADMINISTRATOR"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "f1f1f1f1-0000-0000-0000-000000000002"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "vaults-member@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "MEMBER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "f1f1f1f1-0000-0000-0000-000000000003"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "vaults-outsider@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "MEMBER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+vaults:
+  - id: "f2f2f2f2-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    name: "Shared Accounts"
+    type: "GENERAL"
+    archived: false
+  - id: "f2f2f2f2-0000-0000-0000-000000000002"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    name: "Wi-Fi & Office"
+    type: "GENERAL"
+    archived: false
+  - id: "f2f2f2f2-0000-0000-0000-000000000003"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    name: "Old Archive"
+    type: "GENERAL"
+    archived: true
+access_grants:
+  - id: "f3f3f3f3-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    user_id: "f1f1f1f1-0000-0000-0000-000000000002"
+    resource_type: "VAULT"
+    resource_id: "f2f2f2f2-0000-0000-0000-000000000001"
+    access_level: "WRITE"
+data_keys: []
+refresh_tokens: []
+recovery_codes: []
+consumed_two_factor_tokens: []
+password_reset_tokens: []

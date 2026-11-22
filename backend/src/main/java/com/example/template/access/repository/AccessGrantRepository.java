@@ -18,6 +18,9 @@ public interface AccessGrantRepository extends JpaRepository<AccessGrant, UUID> 
     /** Everyone with a grant on one resource — the base of the "who has access?" view. */
     List<AccessGrant> findAllByResourceTypeAndResourceId(ResourceType resourceType, UUID resourceId);
 
+    /** All grants of one user on one kind of resource — the base of "which vaults can I see?". */
+    List<AccessGrant> findAllByUserIdAndResourceType(UUID userId, ResourceType resourceType);
+
     /** Bulk JPQL on purpose: used when a user is deleted, before the users row goes. */
     @Modifying
     @Query("delete from AccessGrant g where g.userId = :userId")

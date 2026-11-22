@@ -31,6 +31,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AccessControl")
@@ -202,6 +203,33 @@ class AccessControlTest {
             accessControl.revoke(USER_ID, VAULT);
 
             verify(accessGrantRepository, never()).delete(any());
+        }
+    }
+
+    
+    @Nested
+    @DisplayName("resourceIdsOf")
+    class ResourceIdsOf {
+
+        @Test
+        @DisplayName("returns the resources where the user has at least the minimum level")
+        void filtersByMinimumLevel() {
+            var readable = grant(READ);
+            var other = grant(MANAGE);
+            other.setResourceId(UUID.randomUUID());
+            when(accessGrantRepository.findAllByUserIdAndResourceType(USER_ID, ResourceType.VAULT))
+                    .thenReturn(List.of(readable, other));
+
+            assertThat(accessControl.resourceIdsOf(principal(Role.MEMBER), ResourceType.VAULT, WRITE))
+                    .containsExactly(other.getResourceId());
+        }
+
+        @Test
+        @DisplayName("is empty for an auditor, whatever is stored")
+        void auditor_getsNothing() {
+            assertThat(accessControl.resourceIdsOf(principal(Role.AUDITOR), ResourceType.VAULT, READ))
+                    .isEmpty();
+            verify(accessGrantRepository, never()).findAllByUserIdAndResourceType(any(), any());
         }
     }
 }
