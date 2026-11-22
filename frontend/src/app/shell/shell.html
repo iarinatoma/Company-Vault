@@ -22,8 +22,8 @@
 
         @if (auth.hasRole(['PROJECT_OWNER', 'ADMINISTRATOR'])) {
           <a
-            routerLink="/home"
-            routerLinkActive="text-indigo-600"
+            routerLink="/vaults"
+            [queryParams]="{ type: 'PROJECT' }"            routerLinkActive="text-indigo-600"
             class="font-medium text-slate-600 hover:text-slate-900"
           >Projects</a>
         }
