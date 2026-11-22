@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { CreateVaultInput, Vault } from '@app/vaults/models/vault';
+import { firstValueFrom, Observable } from 'rxjs';
+import { CreateProjectVaultInput, CreateVaultInput, Vault } from '@app/vaults/models/vault';
 import { VaultsClient } from './vaults-client';
 
 type Status = 'idle' | 'loading' | 'saving';
@@ -38,11 +38,19 @@ export class VaultsStore {
   }
 
   /** Resolves to `true` on success so the caller can close its dialog. */
-  async create(input: CreateVaultInput): Promise<boolean> {
+  create(input: CreateVaultInput): Promise<boolean> {
+    return this.write(() => this.client.create(input));
+  }
+
+  createProject(input: CreateProjectVaultInput): Promise<boolean> {
+    return this.write(() => this.client.createProject(input));
+  }
+
+  private async write(action: () => Observable<unknown>): Promise<boolean> {
     this._status.set('saving');
     this._saveError.set(null);
     try {
-      await firstValueFrom(this.client.create(input));
+      await firstValueFrom(action());
     } catch (error) {
       this._saveError.set(describe(error));
       this._status.set('idle');

@@ -48,4 +48,39 @@ describe('VaultsClient', () => {
 
     expect(await created).toEqual(VAULT);
   });
+
+
+  it('creates a project vault', async () => {
+    const input = { name: 'Webshop', description: null, ownerId: null };
+    const created = firstValueFrom(client.createProject(input));
+    const request = http.expectOne('/api/v1/vaults/projects');
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(input);
+    request.flush({ ...VAULT, type: 'PROJECT' });
+
+    expect((await created).type).toBe('PROJECT');
+  });
+
+  it('adds, changes and removes members of a vault', async () => {
+    const added = firstValueFrom(client.addMember('vault-1', 'ana@example.com', 'READ'));
+    const add = http.expectOne('/api/v1/vaults/vault-1/members');
+    expect(add.request.method).toBe('POST');
+    expect(add.request.body).toEqual({ email: 'ana@example.com', accessLevel: 'READ' });
+    add.flush({ userId: 'user-1', email: 'ana@example.com', accessLevel: 'READ' });
+    expect((await added).userId).toBe('user-1');
+
+    const updated = firstValueFrom(client.updateMember('vault-1', 'user-1', 'WRITE'));
+    const update = http.expectOne('/api/v1/vaults/vault-1/members/user-1');
+    expect(update.request.method).toBe('PUT');
+    expect(update.request.body).toEqual({ accessLevel: 'WRITE' });
+    update.flush({ userId: 'user-1', email: 'ana@example.com', accessLevel: 'WRITE' });
+    await updated;
+
+    const removed = firstValueFrom(client.removeMember('vault-1', 'user-1'));
+    const remove = http.expectOne('/api/v1/vaults/vault-1/members/user-1');
+    expect(remove.request.method).toBe('DELETE');
+    remove.flush(null);
+    await removed;
+  });  
 });

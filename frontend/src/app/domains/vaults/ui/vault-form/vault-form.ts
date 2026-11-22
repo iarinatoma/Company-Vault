@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { form, FormField, maxLength, required, schema, submit } from '@angular/forms/signals';
 import { User } from '@app/shared/auth/models/auth';
-import { CreateVaultInput } from '@app/vaults/models/vault';
+import { VaultType } from '@app/vaults/models/vault';
 
 interface VaultFormModel {
   name: string;
@@ -18,7 +18,14 @@ interface VaultFormModel {
   ownerId: string;
 }
 
-/** Modal dialog to create a general vault. Emits the input; the parent saves. */
+/** What the form emits; `ownerId` is null when the creator becomes the owner (a project owner). */
+export interface VaultFormValue {
+  readonly name: string;
+  readonly description: string | null;
+  readonly ownerId: string | null;
+}
+
+/** Modal dialog to create a general or a project vault. Emits the input; the parent saves. */
 @Component({
   selector: 'app-vault-form',
   imports: [FormField],
@@ -26,12 +33,15 @@ interface VaultFormModel {
   templateUrl: './vault-form.html',
 })
 export class VaultForm {
+  readonly kind = input<Extract<VaultType, 'GENERAL' | 'PROJECT'>>('GENERAL');
+  /** Administrators choose the owner; a project owner creating a project vault becomes the owner. */
+  readonly chooseOwner = input(true);
   /** The users the admin can choose as owner (the owner gets MANAGE on the new vault). */
   readonly owners = input<readonly User[]>([]);
   readonly saving = input(false);
   readonly error = input<string | null>(null);
 
-  readonly submitted = output<CreateVaultInput>();
+  readonly submitted = output<VaultFormValue>();
   readonly closed = output<void>();
 
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -44,7 +54,7 @@ export class VaultForm {
       required(path.name);
       maxLength(path.name, 100);
       maxLength(path.description, 500);
-      required(path.ownerId);
+      required(path.ownerId, { when: () => this.chooseOwner() });
     }),
   );
 
@@ -62,7 +72,7 @@ export class VaultForm {
       this.submitted.emit({
         name: name.trim(),
         description: description.trim() === '' ? null : description.trim(),
-        ownerId,
+        ownerId: this.chooseOwner() ? ownerId : null,
       });
     });
   }
