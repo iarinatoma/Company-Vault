@@ -31,6 +31,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () => import('@app/home/home.routes').then((m) => m.homeRoutes),
   },
+    {
+    path: 'vaults',
+    canActivate: [authGuard],
+    loadChildren: () => import('@app/vaults/vaults.routes').then((m) => m.vaultsRoutes),
+  },
   {
     path: 'admin',
     canActivate: [roleGuard],
