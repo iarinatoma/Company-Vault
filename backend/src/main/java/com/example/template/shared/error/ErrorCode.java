@@ -17,7 +17,7 @@ public enum ErrorCode {
     ORIGIN_NOT_ALLOWED(HttpStatus.FORBIDDEN, "Request origin is not allowed"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User not found"),
     VAULT_NOT_FOUND(HttpStatus.NOT_FOUND, "Vault not found"),
-    EMAIL_ALREADY_IN_USE(HttpStatus.CONFLICT, "Email is already in use"),
+    LAST_MANAGER(HttpStatus.CONFLICT, "A vault needs at least one member with MANAGE"),    EMAIL_ALREADY_IN_USE(HttpStatus.CONFLICT, "Email is already in use"),
     CANNOT_MODIFY_OWN_ACCOUNT(HttpStatus.CONFLICT, "You cannot change your own role or delete your own account"),
     CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "The resource was modified concurrently — reload and retry"),
     RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "Too many requests"),

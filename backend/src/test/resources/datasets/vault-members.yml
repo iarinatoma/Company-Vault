@@ -1,0 +1,71 @@
+# Fixtures for VaultMemberControllerIT only — datasets are per test class, never shared.
+# All password hashes are bcrypt-12 of TestUsers.PASSWORD ("Password123!").
+# Child tables are listed so the CLEAN_INSERT seeding deletes them first.
+users:
+  - id: "f4f4f4f4-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "members-admin@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "ADMINISTRATOR"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "f4f4f4f4-0000-0000-0000-000000000002"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "members-manager@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "MEMBER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "f4f4f4f4-0000-0000-0000-000000000003"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "members-colleague@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "MEMBER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "f4f4f4f4-0000-0000-0000-000000000004"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "members-auditor@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "AUDITOR"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+  - id: "f4f4f4f4-0000-0000-0000-000000000005"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    email: "members-po@test.local"
+    password_hash: "{bcrypt}$2a$12$RqpeCctM6x7ZBU9SxVudXuZStsxnpn0HcMunp15havBQ2xti37RzS"
+    role: "PROJECT_OWNER"
+    two_factor_enabled: false
+    failed_login_attempts: 0
+vaults:
+  - id: "f5f5f5f5-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    name: "Webshop"
+    type: "PROJECT"
+    archived: false
+access_grants:
+  - id: "f6f6f6f6-0000-0000-0000-000000000001"
+    created_at: "2026-08-12 00:00:00"
+    updated_at: "2026-08-12 00:00:00"
+    version: 0
+    user_id: "f4f4f4f4-0000-0000-0000-000000000002"
+    resource_type: "VAULT"
+    resource_id: "f5f5f5f5-0000-0000-0000-000000000001"
+    access_level: "MANAGE"
+data_keys: []
+refresh_tokens: []
+recovery_codes: []
+consumed_two_factor_tokens: []
+password_reset_tokens: []

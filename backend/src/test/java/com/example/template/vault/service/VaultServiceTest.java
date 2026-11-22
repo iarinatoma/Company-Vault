@@ -36,6 +36,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.example.template.vault.dto.CreateProjectVaultRequest;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VaultService")
@@ -175,4 +176,35 @@ class VaultServiceTest {
                 .extracting(exception -> ((ApiException) exception).errorCode())
                 .isEqualTo(ErrorCode.VAULT_NOT_FOUND);
     }
+
+
+    @Test
+    @DisplayName("a project owner creating a project vault becomes its manager")
+    void createProject_asProjectOwner_ownerIsCreator() {
+        var projectOwner = new AuthPrincipal(UUID.randomUUID(), "po@example.com", Role.PROJECT_OWNER);
+        when(userRepository.existsById(projectOwner.userId())).thenReturn(true);
+        when(vaultRepository.save(any(Vault.class))).thenAnswer(invocation -> {
+            Vault saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(saved, "createdAt", Instant.now());
+            return saved;
+        });
+        when(accessControl.levelOf(eq(projectOwner), any())).thenReturn(AccessLevel.MANAGE);
+
+        var response = vaultService.createProject(
+                projectOwner, new CreateProjectVaultRequest("Webshop", null, UUID.randomUUID()));
+
+        assertThat(response.type()).isEqualTo(VaultType.PROJECT);
+        verify(accessControl)
+                .grant(projectOwner.userId(), new ResourceRef(ResourceType.VAULT, response.id()), AccessLevel.MANAGE);
+    }
+
+    @Test
+    @DisplayName("an administrator must choose the owner of a project vault")
+    void createProject_asAdminWithoutOwner_isRejected() {
+        assertThatThrownBy(() -> vaultService.createProject(ADMIN, new CreateProjectVaultRequest("Webshop", null, null)))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.VALIDATION_FAILED);
+        verify(vaultRepository, never()).save(any());
+    }    
 }
