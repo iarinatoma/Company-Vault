@@ -67,7 +67,8 @@
         @for (vault of visibleVaults(); track vault.id) {
           <li class="flex items-center justify-between gap-4 px-6 py-4">
             <div class="min-w-0">
-              <a [routerLink]="['/vaults', vault.id]" class="block truncate font-medium text-slate-900 hover:text-indigo-600">{{ vault.name }}</a>              @if (vault.description) {
+              <a [routerLink]="['/vaults', vault.id]" class="block truncate font-medium text-slate-900 hover:text-indigo-600">{{ vault.name }}</a>              
+              @if (vault.description) {
                 <p class="truncate text-sm text-slate-500">{{ vault.description }}</p>
               }
               <p class="mt-1 text-xs text-slate-400">{{ vault.type }} · {{ vault.createdAt | date: 'mediumDate' }}</p>
