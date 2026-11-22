@@ -15,6 +15,7 @@ import com.example.template.shared.security.ResourceRef;
 import com.example.template.shared.security.ResourceType;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -147,5 +148,52 @@ class EnvelopeEncryptionTest {
         envelope.deleteKey(VAULT_A);
 
         assertThatThrownBy(() -> envelope.decrypt(VAULT_A, encrypted)).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("rotating a vault's key re-encrypts its secrets so they stay readable")
+    void rotateKey_reEncryptedSecretsStayReadable() {
+        envelope.ensureKey(VAULT_A);
+        String first = envelope.encrypt(VAULT_A, "db-password");
+        String second = envelope.encrypt(VAULT_A, "api-key");
+
+        List<String> rotated = envelope.rotateKey(VAULT_A, List.of(first, second));
+
+        assertThat(rotated).hasSize(2);
+        assertThat(envelope.decrypt(VAULT_A, rotated.get(0))).isEqualTo("db-password");
+        assertThat(envelope.decrypt(VAULT_A, rotated.get(1))).isEqualTo("api-key");
+    }
+
+    @Test
+    @DisplayName("after rotation the old DEK is gone: old ciphertexts no longer decrypt")
+    void rotateKey_oldCiphertextsNoLongerDecrypt() {
+        envelope.ensureKey(VAULT_A);
+        String old = envelope.encrypt(VAULT_A, "db-password");
+        String wrappedBefore = table.get(VAULT_A).getWrappedKey();
+
+        envelope.rotateKey(VAULT_A, List.of(old));
+
+        assertThat(table.get(VAULT_A).getWrappedKey()).isNotEqualTo(wrappedBefore);
+        assertThatThrownBy(() -> envelope.decrypt(VAULT_A, old)).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("rotating one vault's key leaves the other vaults untouched")
+    void rotateKey_otherVaultsUntouched() {
+        envelope.ensureKey(VAULT_A);
+        envelope.ensureKey(VAULT_B);
+        String secretOfB = envelope.encrypt(VAULT_B, "wifi-code");
+
+        envelope.rotateKey(VAULT_A, List.of());
+
+        assertThat(envelope.decrypt(VAULT_B, secretOfB)).isEqualTo("wifi-code");
+    }
+
+    @Test
+    @DisplayName("a vault without a data key cannot be rotated")
+    void rotateKey_missingKey_fails() {
+        assertThatThrownBy(() -> envelope.rotateKey(VAULT_A, List.of()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("No data key");
     }
 }
