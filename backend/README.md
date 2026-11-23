@@ -78,7 +78,8 @@ re-wrap every DEK with the new key before replacing the configured key; simply c
 
 Public registration accepts only an e-mail address (`POST /api/v1/auth/register` with
 `{"email":"you@example.com"}`). It creates a standard member account and sends a one-time
-password setup link; the user chooses their password through the same page used for password
+password setup link; it also creates a personal vault with its own encryption key and grants the
+new user manager access. The user chooses their password through the same page used for password
 resets. The link expires after the configured password-reset token TTL and can be used once.
 
 For local development, email sending is enabled and directed to Mailpit instead of real

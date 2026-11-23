@@ -25,6 +25,7 @@ import com.example.template.user.event.UserDeletedEvent;
 import com.example.template.user.mapper.UserMapper;
 import com.example.template.user.model.User;
 import com.example.template.user.repository.UserRepository;
+import com.example.template.vault.service.VaultService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -66,6 +67,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordResetService passwordResetService;
+
+    @Mock
+    private VaultService vaultService;
 
     @InjectMocks
     private UserService userService;
@@ -237,6 +241,9 @@ class UserServiceTest {
             var setupUserId = ArgumentCaptor.forClass(UUID.class);
             verify(passwordResetService).requestPasswordSetup(setupUserId.capture(), eq(request.email()));
             assertThat(setupUserId.getValue()).isEqualTo(savedUser.getValue().requireId());
+            verify(vaultService)
+                    .createPersonal(new AuthPrincipal(
+                            savedUser.getValue().requireId(), savedUser.getValue().getEmail(), savedUser.getValue().getRole()));
         }
     }
 
