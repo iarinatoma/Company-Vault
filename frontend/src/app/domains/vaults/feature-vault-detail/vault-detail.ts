@@ -32,10 +32,21 @@ export class VaultDetail implements OnInit {
   protected readonly hasAccess = hasAccess;  
   protected readonly grantableLevels: readonly AccessLevel[] = ['READ', 'WRITE', 'MANAGE'];
   protected readonly removing = signal<VaultMember | null>(null);
+  protected readonly renaming = signal(false);
+  protected readonly archiving = signal(false);
+  protected readonly deleting = signal(false);
+  protected readonly editName = signal('');
+  protected readonly editDescription = signal('');
 
   protected readonly removeHeading = $localize`:@@vaultDetail.removeTitle:Remove member?`;
   protected readonly removeLabel = $localize`:@@vaultDetail.confirmRemove:Remove`;
   protected readonly cancelLabel = $localize`:@@vaultDetail.cancel:Cancel`;
+  protected readonly renameHeading = $localize`:@@vaultDetail.renameTitle:Rename vault?`;
+  protected readonly renameLabel = $localize`:@@vaultDetail.confirmRename:Save`;
+  protected readonly archiveHeading = $localize`:@@vaultDetail.archiveTitle:Archive vault?`;
+  protected readonly archiveLabel = $localize`:@@vaultDetail.confirmArchive:Archive`;
+  protected readonly deleteHeading = $localize`:@@vaultDetail.deleteTitle:Delete vault?`;
+  protected readonly deleteLabel = $localize`:@@vaultDetail.confirmDelete:Delete`;
 
   protected readonly newMember = signal<MemberFormModel>({ email: '', accessLevel: 'READ' });
   protected readonly memberForm = form(
@@ -76,5 +87,36 @@ export class VaultDetail implements OnInit {
     const member = this.removing();
     if (member === null) return;
     if (await this.store.removeMember(member.userId)) this.removing.set(null);
+  }
+
+  protected openRename(): void {
+    const vault = this.store.vault();
+    if (vault === null) return;
+    this.store.clearSaveError();
+    this.editName.set(vault.name);
+    this.editDescription.set(vault.description ?? '');
+    this.renaming.set(true);
+  }
+
+  protected async confirmRename(): Promise<void> {
+    const name = this.editName().trim();
+    if (name === '') return;
+    const description = this.editDescription().trim();
+    if (await this.store.update(name, description === '' ? null : description)) {
+      this.renaming.set(false);
+    }
+  }
+
+  protected async confirmArchive(): Promise<void> {
+    this.store.clearSaveError();
+    if (await this.store.archive()) this.archiving.set(false);
+  }
+
+  protected async confirmDelete(): Promise<void> {
+    this.store.clearSaveError();
+    if (await this.store.delete()) {
+      this.deleting.set(false);
+      window.location.href = '/vaults';
+    }
   }
 }

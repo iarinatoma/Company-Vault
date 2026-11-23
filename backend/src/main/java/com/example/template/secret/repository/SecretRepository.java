@@ -13,4 +13,7 @@ public interface SecretRepository extends JpaRepository<Secret, UUID> {
 
     /** A secret only if it belongs to that vault — access to vault A never reaches a secret of vault B. */
     Optional<Secret> findByIdAndVaultId(UUID id, UUID vaultId);
+
+    /** Deletes all secret metadata and ciphertext rows belonging to a vault being deleted. */
+    void deleteAllByVaultId(UUID vaultId);
 }
