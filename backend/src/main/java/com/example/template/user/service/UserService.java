@@ -15,6 +15,7 @@ import com.example.template.user.event.UserDeletedEvent;
 import com.example.template.user.mapper.UserMapper;
 import com.example.template.user.model.User;
 import com.example.template.user.repository.UserRepository;
+import com.example.template.vault.service.VaultService;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordResetService passwordResetService;
+    private final VaultService vaultService;
 
     public UserService(
             UserRepository userRepository,
@@ -47,13 +49,15 @@ public class UserService {
             ScopeAccessGuard scopeAccessGuard,
             PasswordEncoder passwordEncoder,
             ApplicationEventPublisher eventPublisher,
-            PasswordResetService passwordResetService) {
+            PasswordResetService passwordResetService,
+            VaultService vaultService) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.scopeAccessGuard = scopeAccessGuard;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
         this.passwordResetService = passwordResetService;
+        this.vaultService = vaultService;
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +91,7 @@ public class UserService {
     @Transactional
     public UserResponse register(RegisterUserRequest request) {
         var user = createUser(request.email(), UUID.randomUUID().toString(), Role.MEMBER);
+        vaultService.createPersonal(new AuthPrincipal(user.requireId(), user.getEmail(), user.getRole()));
         passwordResetService.requestPasswordSetup(user.requireId(), user.getEmail());
         return userMapper.toResponse(user);
     }

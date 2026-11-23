@@ -102,6 +102,28 @@ class VaultServiceTest {
     }
 
     @Test
+    @DisplayName("creating a personal vault stores it, creates its data key and makes its owner manager")
+    void createPersonal_storesVaultKeyAndOwnerGrant() {
+        when(userRepository.existsById(MEMBER.userId())).thenReturn(true);
+        when(vaultRepository.save(any(Vault.class))).thenAnswer(invocation -> {
+            Vault saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(saved, "createdAt", Instant.now());
+            return saved;
+        });
+        when(accessControl.levelOf(eq(MEMBER), any())).thenReturn(AccessLevel.MANAGE);
+
+        var response = vaultService.createPersonal(MEMBER);
+
+        assertThat(response.type()).isEqualTo(VaultType.PERSONAL);
+        assertThat(response.name()).isEqualTo("Personal vault");
+        assertThat(response.accessLevel()).isEqualTo(AccessLevel.MANAGE);
+        var resource = new ResourceRef(ResourceType.VAULT, response.id());
+        verify(envelopeEncryption).ensureKey(resource);
+        verify(accessControl).grant(MEMBER.userId(), resource, AccessLevel.MANAGE);
+    }
+
+    @Test
     @DisplayName("an unknown owner is rejected before anything is stored")
     void createGeneral_unknownOwner_isRejected() {
         when(userRepository.existsById(OWNER_ID)).thenReturn(false);
