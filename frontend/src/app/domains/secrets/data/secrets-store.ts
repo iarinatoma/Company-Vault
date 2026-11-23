@@ -1,28 +1,38 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
-import { Secret, SecretInput } from '@app/secrets/models/secret';
+import { Folder, MoveSecretInput, Secret, SecretInput } from '@app/secrets/models/secret';
+import { FoldersClient } from './folders-client';
 import { SecretsClient } from './secrets-client';
 
 type Status = 'idle' | 'loading' | 'saving';
+export type FolderSelection = 'ALL' | 'ROOT' | string;
 
 /**
- * State of one vault's secrets. Provided by the panel component (not root), so revealed values
- * live only as long as that page and are never shared with another vault. Values are fetched
- * only on an explicit "Show" and dropped again on "Hide", edit or delete.
+ * State of one vault's folders and secrets. Provided by the panel component (not root),
+ * so revealed values live only as long as that page and are never shared with another vault.
  */
 @Injectable()
 export class SecretsStore {
   private readonly client = inject(SecretsClient);
+  private readonly foldersClient = inject(FoldersClient);
   private vaultId: string | null = null;
 
   private readonly _items = signal<readonly Secret[]>([]);
+  private readonly _folders = signal<readonly Folder[]>([]);
+  private readonly _selectedFolder = signal<FolderSelection>('ALL');
+  private readonly _searchQuery = signal('');
+  private readonly _selectedTag = signal<string | null>(null);
   private readonly _revealed = signal<ReadonlyMap<string, string>>(new Map());
   private readonly _status = signal<Status>('idle');
   private readonly _loadError = signal<string | null>(null);
   private readonly _saveError = signal<string | null>(null);
 
   readonly items = this._items.asReadonly();
+  readonly folders = this._folders.asReadonly();
+  readonly selectedFolder = this._selectedFolder.asReadonly();
+  readonly searchQuery = this._searchQuery.asReadonly();
+  readonly selectedTag = this._selectedTag.asReadonly();
   /** Secret id → decrypted value, only for the secrets the user chose to show. */
   readonly revealed = this._revealed.asReadonly();
   readonly loadError = this._loadError.asReadonly();
@@ -30,19 +40,77 @@ export class SecretsStore {
   readonly loading = computed(() => this._status() === 'loading');
   readonly saving = computed(() => this._status() === 'saving');
 
+  /** All distinct tags present in the currently loaded secrets, sorted alphabetically. */
+  readonly availableTags = computed(() => {
+    const tags = new Set<string>();
+    for (const secret of this._items()) {
+      for (const tag of secret.tags ?? []) {
+        tags.add(tag);
+      }
+    }
+    return [...tags].sort((a, b) => a.localeCompare(b));
+  });
+
+  /** Client-side filtered view for instant feedback alongside backend metadata search. */
+  readonly filteredItems = computed(() => {
+    const folder = this._selectedFolder();
+    const query = this._searchQuery().trim().toLowerCase();
+    const tag = this._selectedTag()?.trim().toLowerCase() ?? null;
+
+    return this._items().filter((secret) => {
+      if (folder === 'ROOT' && secret.folderId !== null) return false;
+      if (folder !== 'ALL' && folder !== 'ROOT' && secret.folderId !== folder) return false;
+      if (tag && !(secret.tags ?? []).includes(tag)) return false;
+      if (query !== '') {
+        const inName = secret.name.toLowerCase().includes(query);
+        const inTags = (secret.tags ?? []).some((t) => t.toLowerCase().includes(query));
+        if (!inName && !inTags) return false;
+      }
+      return true;
+    });
+  });
+
+  readonly rootSecretCount = computed(() => this._items().filter((s) => s.folderId === null).length);
+
   async load(vaultId: string): Promise<void> {
     this.vaultId = vaultId;
     this._items.set([]);
     this._revealed.set(new Map());
+    this._selectedFolder.set('ALL');
+    this._searchQuery.set('');
+    this._selectedTag.set(null);
     this._status.set('loading');
     this._loadError.set(null);
     try {
-      this._items.set(await firstValueFrom(this.client.list(vaultId)));
+      const [secrets, folders] = await Promise.all([
+        firstValueFrom(this.client.list(vaultId)),
+        firstValueFrom(this.foldersClient.list(vaultId)),
+      ]);
+      this._items.set(secrets);
+      this._folders.set(folders);
     } catch (error) {
       this._loadError.set(describe(error));
     } finally {
       this._status.set('idle');
     }
+  }
+
+  selectFolder(selection: FolderSelection): void {
+    this._selectedFolder.set(selection);
+  }
+
+  setSearchQuery(query: string): void {
+    this._searchQuery.set(query);
+  }
+
+  toggleTagFilter(tag: string): void {
+    this._selectedTag.update((current) => (current === tag ? null : tag));
+  }
+
+  clearFilters(): void {
+    this._selectedFolder.set('ALL');
+    this._searchQuery.set('');
+    this._selectedTag.set(null);
   }
 
   async reveal(secretId: string): Promise<void> {
@@ -73,9 +141,30 @@ export class SecretsStore {
     return this.write((vaultId) => this.client.update(vaultId, secretId, input));
   }
 
+  moveSecret(secretId: string, input: MoveSecretInput): Promise<boolean> {
+    this.hide(secretId);
+    return this.write((vaultId) => this.client.move(vaultId, secretId, input));
+  }
+
   remove(secretId: string): Promise<boolean> {
     this.hide(secretId);
     return this.write((vaultId) => this.client.delete(vaultId, secretId));
+  }
+
+  createFolder(name: string): Promise<boolean> {
+    return this.write((vaultId) => this.foldersClient.create(vaultId, { name }));
+  }
+
+  renameFolder(folderId: string, name: string): Promise<boolean> {
+    return this.write((vaultId) => this.foldersClient.update(vaultId, folderId, { name }));
+  }
+
+  async removeFolder(folderId: string): Promise<boolean> {
+    const ok = await this.write((vaultId) => this.foldersClient.delete(vaultId, folderId));
+    if (ok && this._selectedFolder() === folderId) {
+      this._selectedFolder.set('ALL');
+    }
+    return ok;
   }
 
   clearSaveError(): void {
@@ -89,7 +178,12 @@ export class SecretsStore {
     this._saveError.set(null);
     try {
       await firstValueFrom(action(vaultId));
-      this._items.set(await firstValueFrom(this.client.list(vaultId)));
+      const [secrets, folders] = await Promise.all([
+        firstValueFrom(this.client.list(vaultId)),
+        firstValueFrom(this.foldersClient.list(vaultId)),
+      ]);
+      this._items.set(secrets);
+      this._folders.set(folders);
       return true;
     } catch (error) {
       this._saveError.set(describe(error));
@@ -106,6 +200,10 @@ function describe(error: unknown): string {
     switch (code) {
       case 'SECRET_NOT_FOUND':
         return $localize`:@@secrets.err.notFound:This secret no longer exists.`;
+      case 'FOLDER_NOT_FOUND':
+        return $localize`:@@secrets.err.folderNotFound:This folder no longer exists.`;
+      case 'FOLDER_NAME_ALREADY_EXISTS':
+        return $localize`:@@secrets.err.folderDuplicate:A folder with this name already exists in this vault.`;
       case 'VAULT_ARCHIVED':
         return $localize`:@@secrets.err.archived:This vault is archived and read-only.`;
       case 'VALIDATION_FAILED':
