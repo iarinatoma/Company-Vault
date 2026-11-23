@@ -17,6 +17,8 @@ import com.example.template.access.dto.AccessLevelResponse;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.example.template.shared.security.ResourceType;
+import com.example.template.access.dto.ResourceMember;
+import java.util.List;
 
 /**
  * The central permission check for vaults, projects, folders and secrets. Every service method
@@ -87,6 +89,14 @@ public class AccessControl {
                 .filter(grant -> grant.getAccessLevel().includes(minimum))
                 .map(AccessGrant::getResourceId)
                 .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /** Everyone with a grant on the resource and their level — "who has access to this?" (spec 4.4). */
+    @Transactional(readOnly = true)
+    public List<ResourceMember> membersOf(ResourceRef resource) {
+        return accessGrantRepository.findAllByResourceTypeAndResourceId(resource.type(), resource.id()).stream()
+                .map(grant -> new ResourceMember(grant.getUserId(), grant.getAccessLevel()))
+                .toList();
     }
 
     /**

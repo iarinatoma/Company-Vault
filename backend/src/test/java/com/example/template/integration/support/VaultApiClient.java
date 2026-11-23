@@ -39,6 +39,30 @@ public class VaultApiClient {
         return exchange(HttpMethod.POST, "/api/v1/vaults", accessToken, body);
     }
 
+    public ResponseEntity<JsonNode> createProject(
+            @Nullable String accessToken, String name, @Nullable String ownerId) {
+        var body = new HashMap<String, @Nullable Object>();
+        body.put("name", name);
+        body.put("ownerId", ownerId);
+        return exchange(HttpMethod.POST, "/api/v1/vaults/projects", accessToken, body);
+    }
+
+    public ResponseEntity<JsonNode> members(@Nullable String accessToken, String vaultId) {
+        return exchange(HttpMethod.GET, "/api/v1/vaults/" + vaultId + "/members", accessToken, null);
+    }
+
+    public ResponseEntity<JsonNode> addMember(
+            @Nullable String accessToken, String vaultId, String email, String accessLevel) {
+        var body = new HashMap<String, @Nullable Object>();
+        body.put("email", email);
+        body.put("accessLevel", accessLevel);
+        return exchange(HttpMethod.POST, "/api/v1/vaults/" + vaultId + "/members", accessToken, body);
+    }
+
+    public ResponseEntity<JsonNode> removeMember(@Nullable String accessToken, String vaultId, String userId) {
+        return exchange(HttpMethod.DELETE, "/api/v1/vaults/" + vaultId + "/members/" + userId, accessToken, null);
+    }
+
     private ResponseEntity<JsonNode> exchange(
             HttpMethod method, String path, @Nullable String accessToken, @Nullable Map<String, @Nullable Object> body) {
         var headers = new HttpHeaders();

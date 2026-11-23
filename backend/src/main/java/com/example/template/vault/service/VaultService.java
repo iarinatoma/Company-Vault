@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.template.vault.dto.CreateProjectVaultRequest;
 
 /**
  * Vaults: creation, the list a user may see, and the metadata of one vault. Who may use a vault is
@@ -56,21 +57,44 @@ public class VaultService {
      */
     @Transactional
     public VaultResponse createGeneral(AuthPrincipal admin, CreateVaultRequest request) {
-        if (!userRepository.existsById(request.ownerId())) {
+        return create(admin, VaultType.GENERAL, request.name(), request.description(), request.ownerId());
+    }
+
+    /**
+     * Creates a project vault. A project owner manages their own project vault; an administrator
+     * chooses its owner and, as for general vaults, gets no access unless they choose themselves.
+     */
+    @Transactional
+    public VaultResponse createProject(AuthPrincipal principal, CreateProjectVaultRequest request) {
+        UUID ownerId = principal.userId();
+        if (principal.role() == Role.ADMINISTRATOR) {
+            UUID chosen = request.ownerId();
+            if (chosen == null) {
+                throw new ApiException(ErrorCode.VALIDATION_FAILED, "An administrator must choose the owner");
+            }
+            ownerId = chosen;
+        }
+        return create(principal, VaultType.PROJECT, request.name(), request.description(), ownerId);
+    }
+
+    /** Stores the vault, creates its data key and gives the owner MANAGE — shared by every vault type. */
+    private VaultResponse create(
+            AuthPrincipal creator, VaultType type, String name, @Nullable String description, UUID ownerId) {
+        if (!userRepository.existsById(ownerId)) {
             throw new ApiException(ErrorCode.USER_NOT_FOUND);
         }
         var vault = new Vault();
-        vault.setName(request.name().strip());
-        vault.setDescription(blankToNull(request.description()));
-        vault.setType(VaultType.GENERAL);
-        vault.setCreatedBy(admin.userId());
+        vault.setName(name.strip());
+        vault.setDescription(blankToNull(description));
+        vault.setType(type);
+        vault.setCreatedBy(creator.userId());
         vault = vaultRepository.save(vault);
 
         var resource = refOf(vault);
         envelopeEncryption.ensureKey(resource);
-        accessControl.grant(request.ownerId(), resource, AccessLevel.MANAGE);
-        log.info("General vault {} created by {} with owner {}", vault.requireId(), admin.userId(), request.ownerId());
-        return toResponse(vault, accessControl.levelOf(admin, resource));
+        accessControl.grant(ownerId, resource, AccessLevel.MANAGE);
+        log.info("{} vault {} created by {} with owner {}", type, vault.requireId(), creator.userId(), ownerId);
+        return toResponse(vault, accessControl.levelOf(creator, resource));
     }
 
     /** Admins: every active vault (metadata only). Everyone else: the active vaults they can read. */

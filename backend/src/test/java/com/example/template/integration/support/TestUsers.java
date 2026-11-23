@@ -52,5 +52,17 @@ public final class TestUsers {
     /** The vault the member holds WRITE on. */
     public static final UUID VAULTS_SHARED_ID = UUID.fromString("f2f2f2f2-0000-0000-0000-000000000001");
 
+
+    // datasets/vault-members.yml
+    public static final String MEMBERS_ADMIN_EMAIL = "members-admin@test.local";
+    public static final UUID MEMBERS_MANAGER_ID = UUID.fromString("f4f4f4f4-0000-0000-0000-000000000002");
+    public static final String MEMBERS_MANAGER_EMAIL = "members-manager@test.local";
+    public static final UUID MEMBERS_COLLEAGUE_ID = UUID.fromString("f4f4f4f4-0000-0000-0000-000000000003");
+    public static final String MEMBERS_COLLEAGUE_EMAIL = "members-colleague@test.local";
+    public static final String MEMBERS_AUDITOR_EMAIL = "members-auditor@test.local";
+    public static final String MEMBERS_PO_EMAIL = "members-po@test.local";
+    /** The project vault the manager holds MANAGE on. */
+    public static final UUID MEMBERS_VAULT_ID = UUID.fromString("f5f5f5f5-0000-0000-0000-000000000001");
+
     private TestUsers() {}
 }

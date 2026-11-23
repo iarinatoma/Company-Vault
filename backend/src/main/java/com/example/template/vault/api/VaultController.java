@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import com.example.template.vault.dto.CreateProjectVaultRequest;
 
 @RestController
 @RequestMapping("/api/v{version}/vaults")
@@ -29,6 +31,9 @@ public class VaultController {
     }
 
     // Every logged-in user; the service decides which vaults they see
+    @Operation(
+        summary = "List the vaults the caller can see",
+        description = "Administrators get every active vault (metadata only); everyone else the vaults they hold at least READ on.")
     @GetMapping(version = "1")
     @PreAuthorize("isAuthenticated()")
     public List<VaultResponse> list(@AuthenticationPrincipal AuthPrincipal principal) {
@@ -36,6 +41,10 @@ public class VaultController {
     }
 
     // Admins always; everyone else needs at least READ on the vault (checked in the service)
+    
+    @Operation(
+            summary = "Get one vault's metadata and the caller's access level",
+            description = "Administrators always; everyone else needs at least READ, otherwise 403.")    
     @GetMapping(path = "/{id}", version = "1")
     @PreAuthorize("isAuthenticated()")
     public VaultResponse get(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
@@ -43,6 +52,9 @@ public class VaultController {
     }
 
     // Only administrators create general vaults
+    @Operation(
+            summary = "Create a general vault",
+            description = "Administrators only. The chosen owner gets MANAGE; the creating admin gets no access to the vault's secrets.")
     @PostMapping(version = "1")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     @ResponseStatus(HttpStatus.CREATED)
@@ -50,4 +62,17 @@ public class VaultController {
             @AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody CreateVaultRequest request) {
         return vaultService.createGeneral(principal, request);
     }
+
+    @Operation(
+            summary = "Create a project vault",
+            description = "Administrators and project owners. A project owner becomes its manager; an administrator "
+                    + "must choose the owner and gets no access to its secrets unless they choose themselves.")
+    @PostMapping(path = "/projects", version = "1")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'PROJECT_OWNER')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public VaultResponse createProject(
+            @AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody CreateProjectVaultRequest request) {
+        return vaultService.createProject(principal, request);
+    }
+
 }
