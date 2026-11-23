@@ -32,6 +32,7 @@ export class SecretsStore {
 
   async load(vaultId: string): Promise<void> {
     this.vaultId = vaultId;
+    this._items.set([]);
     this._revealed.set(new Map());
     this._status.set('loading');
     this._loadError.set(null);
