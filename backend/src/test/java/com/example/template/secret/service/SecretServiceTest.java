@@ -9,8 +9,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.template.access.service.AccessControl;
+import com.example.template.folder.repository.FolderRepository;
 import com.example.template.keys.service.EnvelopeEncryption;
 import com.example.template.secret.dto.CreateSecretRequest;
+import com.example.template.secret.dto.MoveSecretRequest;
 import com.example.template.secret.dto.UpdateSecretRequest;
 import com.example.template.secret.model.Secret;
 import com.example.template.secret.repository.SecretRepository;
@@ -47,6 +49,9 @@ class SecretServiceTest {
 
     @Mock
     private SecretRepository secretRepository;
+
+    @Mock
+    private FolderRepository folderRepository;
 
     @Mock
     private VaultRepository vaultRepository;
@@ -150,6 +155,106 @@ class SecretServiceTest {
         assertThat(saved.getValue().getEncryptedValue()).isEqualTo("ENCRYPTED").doesNotContain("s3cr3t");
         assertThat(saved.getValue().getName()).isEqualTo("Database");
         assertThat(saved.getValue().getCreatedBy()).isEqualTo(USER.userId());
+    }
+
+    @Test
+    @DisplayName("creating with metadata stores folder, description, normalized tags and expiry")
+    void create_withMetadata_storesAllFields() {
+        activeVault();
+        UUID folderId = UUID.randomUUID();
+        when(folderRepository.existsByIdAndVaultId(folderId, VAULT_ID)).thenReturn(true);
+        when(envelopeEncryption.encrypt(VAULT, "s3cr3t")).thenReturn("ENCRYPTED");
+        when(secretRepository.save(any(Secret.class))).thenAnswer(invocation -> {
+            Secret saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(saved, "createdAt", Instant.now());
+            ReflectionTestUtils.setField(saved, "updatedAt", Instant.now());
+            return saved;
+        });
+
+        Instant expiry = Instant.parse("2027-01-01T00:00:00Z");
+        var response = service.create(
+                USER,
+                VAULT_ID,
+                new CreateSecretRequest(
+                        "Prod DB", "s3cr3t", folderId, "Primary Postgres", List.of("Prod", "AWS", "prod"), expiry));
+
+        assertThat(response.folderId()).isEqualTo(folderId);
+        assertThat(response.description()).isEqualTo("Primary Postgres");
+        assertThat(response.tags()).containsExactly("prod", "aws");
+        assertThat(response.expiresAt()).isEqualTo(expiry);
+    }
+
+    @Test
+    @DisplayName("searching filters by plaintext name and tags without decrypting anything")
+    void list_filtersByQueryTagAndFolder_withoutDecrypting() {
+        UUID folderA = UUID.randomUUID();
+        var s1 = storedSecret("Postgres Primary", "ENC_1");
+        s1.setFolderId(folderA);
+        s1.setTags("prod,db");
+
+        var s2 = storedSecret("Stripe Webhook", "ENC_2");
+        s2.setTags("prod,payments");
+
+        when(secretRepository.findAllByVaultIdOrderByNameAsc(VAULT_ID)).thenReturn(List.of(s1, s2));
+
+        var byTag = service.list(USER, VAULT_ID, null, "PAYMENTS", null, false);
+        assertThat(byTag).singleElement().satisfies(s -> assertThat(s.name()).isEqualTo("Stripe Webhook"));
+
+        var byQueryAndFolder = service.list(USER, VAULT_ID, "db", null, folderA, false);
+        assertThat(byQueryAndFolder).singleElement().satisfies(s -> assertThat(s.name()).isEqualTo("Postgres Primary"));
+
+        var rootOnly = service.list(USER, VAULT_ID, null, null, null, true);
+        assertThat(rootOnly).singleElement().satisfies(s -> assertThat(s.name()).isEqualTo("Stripe Webhook"));
+
+        verify(envelopeEncryption, never()).decrypt(any(), any());
+    }
+
+    @Test
+    @DisplayName("moving between folders in the same vault updates folderId without re-encryption")
+    void move_withinSameVault_doesNotReEncrypt() {
+        activeVault();
+        UUID targetFolderId = UUID.randomUUID();
+        when(folderRepository.existsByIdAndVaultId(targetFolderId, VAULT_ID)).thenReturn(true);
+
+        var secret = storedSecret("API Key", "ENCRYPTED_WITH_VAULT_KEY");
+        when(secretRepository.findByIdAndVaultId(secret.requireId(), VAULT_ID)).thenReturn(Optional.of(secret));
+        when(secretRepository.saveAndFlush(secret)).thenReturn(secret);
+
+        var moved = service.move(USER, VAULT_ID, secret.requireId(), new MoveSecretRequest(null, targetFolderId));
+
+        assertThat(moved.folderId()).isEqualTo(targetFolderId);
+        assertThat(secret.getEncryptedValue()).isEqualTo("ENCRYPTED_WITH_VAULT_KEY");
+        verify(envelopeEncryption, never()).decrypt(any(), any());
+        verify(envelopeEncryption, never()).encrypt(any(), any());
+    }
+
+    @Test
+    @DisplayName("moving to another vault decrypts with the old DEK and encrypts with the new DEK")
+    void move_acrossVaults_reEncryptsWithTargetVaultKey() {
+        UUID targetVaultId = UUID.randomUUID();
+        ResourceRef targetVaultRef = new ResourceRef(ResourceType.VAULT, targetVaultId);
+        UUID targetFolderId = UUID.randomUUID();
+
+        activeVault();
+        when(vaultRepository.findById(targetVaultId)).thenReturn(Optional.of(new Vault()));
+        when(folderRepository.existsByIdAndVaultId(targetFolderId, targetVaultId)).thenReturn(true);
+
+        var secret = storedSecret("Shared Token", "OLD_CIPHERTEXT");
+        when(secretRepository.findByIdAndVaultId(secret.requireId(), VAULT_ID)).thenReturn(Optional.of(secret));
+        when(envelopeEncryption.decrypt(VAULT, "OLD_CIPHERTEXT")).thenReturn("plain-token");
+        when(envelopeEncryption.encrypt(targetVaultRef, "plain-token")).thenReturn("NEW_CIPHERTEXT");
+        when(secretRepository.saveAndFlush(secret)).thenReturn(secret);
+
+        var moved = service.move(
+                USER, VAULT_ID, secret.requireId(), new MoveSecretRequest(targetVaultId, targetFolderId));
+
+        verify(accessControl).require(USER, VAULT, AccessLevel.MANAGE);
+        verify(accessControl).require(USER, targetVaultRef, AccessLevel.WRITE);
+        verify(envelopeEncryption).ensureKey(targetVaultRef);
+        assertThat(moved.vaultId()).isEqualTo(targetVaultId);
+        assertThat(moved.folderId()).isEqualTo(targetFolderId);
+        assertThat(secret.getEncryptedValue()).isEqualTo("NEW_CIPHERTEXT");
     }
 
     @Test

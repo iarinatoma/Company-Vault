@@ -1,6 +1,7 @@
 package com.example.template.secret.dto;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -8,7 +9,11 @@ import org.jspecify.annotations.Nullable;
 public record SecretResponse(
         UUID id,
         UUID vaultId,
+        @Nullable UUID folderId,
         String name,
+        @Nullable String description,
+        List<String> tags,
+        @Nullable Instant expiresAt,
         @Nullable String ownerEmail,
         @Nullable String updatedByEmail,
         Instant createdAt,

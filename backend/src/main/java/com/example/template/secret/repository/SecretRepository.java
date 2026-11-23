@@ -5,12 +5,19 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface SecretRepository extends JpaRepository<Secret, UUID> {
 
-    /** All secrets of one vault, by name — metadata only is ever sent out of the service. */
     List<Secret> findAllByVaultIdOrderByNameAsc(UUID vaultId);
 
-    /** A secret only if it belongs to that vault — access to vault A never reaches a secret of vault B. */
     Optional<Secret> findByIdAndVaultId(UUID id, UUID vaultId);
+
+    long countByVaultIdAndFolderId(UUID vaultId, UUID folderId);
+
+    @Modifying
+    @Query("update Secret s set s.folderId = null where s.vaultId = :vaultId and s.folderId = :folderId")
+    void clearFolderId(@Param("vaultId") UUID vaultId, @Param("folderId") UUID folderId);
 }
