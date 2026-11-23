@@ -91,7 +91,6 @@ public class UserService {
     @Transactional
     public UserResponse register(RegisterUserRequest request) {
         var user = createUser(request.email(), UUID.randomUUID().toString(), Role.MEMBER);
-        vaultService.createPersonal(new AuthPrincipal(user.requireId(), user.getEmail(), user.getRole()));
         passwordResetService.requestPasswordSetup(user.requireId(), user.getEmail());
         return userMapper.toResponse(user);
     }
@@ -107,9 +106,12 @@ public class UserService {
         var saved = userRepository.save(user);
         log.info("User {} created with role {}", saved.requireId(), saved.getRole());
         eventPublisher.publishEvent(new UserCreatedEvent(saved.requireId(), saved.getEmail()));
+        if (role != Role.AUDITOR) {
+            vaultService.createPersonal(new AuthPrincipal(saved.requireId(), saved.getEmail(), role));
+        }
         return saved;
     }
-
+    
     @Transactional
     public UserResponse update(AuthPrincipal principal, UUID id, UpdateUserRequest request) {
         var user = userRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));

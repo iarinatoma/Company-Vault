@@ -196,6 +196,7 @@ class UserServiceTest {
             verify(userRepository).save(savedUser.capture());
             assertThat(savedUser.getValue().getPasswordHash()).isEqualTo("{bcrypt}encoded");
             verify(eventPublisher).publishEvent(any(UserCreatedEvent.class));
+            verify(vaultService).createPersonal(any(AuthPrincipal.class));
         }
 
         @Test
