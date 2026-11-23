@@ -1,0 +1,116 @@
+<section class="space-y-6">
+  <a routerLink="/vaults" class="text-sm font-medium text-indigo-600 hover:text-indigo-500" i18n="@@vaultDetail.back">← All vaults</a>
+
+  @if (store.loading()) {
+    <p class="text-sm text-slate-500" i18n="@@vaultDetail.loading">Loading…</p>
+  } @else if (store.loadError(); as message) {
+    <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{{ message }}</p>
+  } @else if (store.vault(); as vault) {
+    <header>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-semibold tracking-tight">{{ vault.name }}</h1>
+        <span class="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">{{ vault.type }}</span>
+      </div>
+      @if (vault.description) {
+        <p class="mt-1 text-sm text-slate-600">{{ vault.description }}</p>
+      }
+      <p class="mt-1 text-xs text-slate-400">
+        <ng-container i18n="@@vaultDetail.yourAccess">Your access:</ng-container> {{ vault.accessLevel }} ·
+        {{ vault.createdAt | date: 'mediumDate' }}
+      </p>
+    </header>
+
+    @if (store.canManageMembers()) {
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 px-6 py-4">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500" i18n="@@vaultDetail.members">Members</h2>
+          @if (isAdmin() && vault.accessLevel !== 'MANAGE') {
+            <p class="mt-1 text-xs text-amber-700" i18n="@@vaultDetail.adminRecovery">You are not a manager of this vault. As an administrator you can still recover access; this is logged.</p>
+          }
+        </div>
+
+        <ul class="divide-y divide-slate-200">
+          @for (member of store.members(); track member.userId) {
+            <li class="flex items-center justify-between gap-4 px-6 py-3">
+              <span class="truncate text-sm text-slate-900">{{ member.email }}</span>
+              <div class="flex shrink-0 items-center gap-2">
+                <select
+                  class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm"
+                  [value]="member.accessLevel"
+                  [disabled]="store.saving()"
+                  (change)="changeLevel(member, $event)"
+                  [attr.aria-label]="member.email"
+                >
+                  @for (level of grantableLevels; track level) {
+                    <option [value]="level" [selected]="level === member.accessLevel">{{ level }}</option>
+                  }
+                </select>
+                <button
+                  type="button"
+                  class="text-sm font-medium text-red-600 hover:text-red-500"
+                  (click)="openRemove(member)"
+                  i18n="@@vaultDetail.remove"
+                >Remove</button>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <form class="flex flex-wrap items-start gap-2 border-t border-slate-200 px-6 py-4" novalidate (submit)="$event.preventDefault(); addMember()">
+          <div class="min-w-48 flex-1">
+            <label for="member-email" class="sr-only" i18n="@@vaultDetail.memberEmail">E-mail</label>
+            <input
+              id="member-email"
+              type="email"
+              autocomplete="off"
+              placeholder="colleague@company.com"
+              class="block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              [formField]="memberForm.email"
+            />
+            @if (memberForm.email().invalid() && newMember().email !== '') {
+              <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@vaultDetail.emailInvalid">Enter a valid e-mail address.</p>
+            }
+          </div>
+          <label for="member-level" class="sr-only" i18n="@@vaultDetail.memberLevel">Access level</label>
+          <select
+            id="member-level"
+            class="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            [formField]="memberForm.accessLevel"
+          >
+            @for (level of grantableLevels; track level) {
+              <option [value]="level">{{ level }}</option>
+            }
+          </select>
+          <button
+            type="submit"
+            class="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+            [disabled]="store.saving()"
+            i18n="@@vaultDetail.add"
+          >Add member</button>
+        </form>
+
+        @if (store.saveError(); as message) {
+          @if (removing() === null) {
+            <p class="mx-6 mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{{ message }}</p>
+          }
+        }
+      </div>
+    }
+  }
+</section>
+
+@if (removing(); as member) {
+  <app-confirm-dialog
+    [heading]="removeHeading"
+    [confirmLabel]="removeLabel"
+    [cancelLabel]="cancelLabel"
+    [busy]="store.saving()"
+    [error]="store.saveError()"
+    (confirmed)="confirmRemove()"
+    (closed)="removing.set(null)"
+  >
+    <p class="text-sm text-slate-600">
+      {{ member.email }} <ng-container i18n="@@vaultDetail.removeBody">loses access to this vault immediately.</ng-container>
+    </p>
+  </app-confirm-dialog>
+}

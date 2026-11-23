@@ -4,7 +4,13 @@
   aria-labelledby="vault-form-title"
   (cancel)="$event.preventDefault(); closed.emit()"
 >
-  <h2 id="vault-form-title" class="text-lg font-semibold" i18n="@@vaultForm.title">New vault</h2>
+  <h2 id="vault-form-title" class="text-lg font-semibold">
+    @if (kind() === 'PROJECT') {
+      <ng-container i18n="@@vaultForm.projectTitle">New project vault</ng-container>
+    } @else {
+      <ng-container i18n="@@vaultForm.title">New vault</ng-container>
+    }
+  </h2>
 
   <form class="mt-4 space-y-4" novalidate (submit)="$event.preventDefault(); save()">
     <div>
@@ -34,25 +40,27 @@
       }
     </div>
 
-    <div>
-      <label for="vault-owner" class="block text-sm font-medium text-slate-700" i18n="@@vaultForm.owner">Owner</label>
-      <select
-        id="vault-owner"
-        class="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-        [formField]="form.ownerId"
-      >
-        <option value="" disabled i18n="@@vaultForm.ownerPlaceholder">Choose a user…</option>
-        @for (owner of owners(); track owner.id) {
-          <option [value]="owner.id">{{ owner.email }}</option>
+    @if (chooseOwner()) {
+      <div>
+        <label for="vault-owner" class="block text-sm font-medium text-slate-700" i18n="@@vaultForm.owner">Owner</label>
+        <select
+          id="vault-owner"
+          class="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          [formField]="form.ownerId"
+        >
+          <option value="" disabled i18n="@@vaultForm.ownerPlaceholder">Choose a user…</option>
+          @for (owner of owners(); track owner.id) {
+            <option [value]="owner.id">{{ owner.email }}</option>
+          }
+        </select>
+        @if (form.ownerId().invalid() && form.ownerId().touched()) {
+          <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@vaultForm.ownerRequired">Choose who manages this vault.</p>
+        } @else {
+          <p class="mt-1 text-xs text-slate-500" i18n="@@vaultForm.ownerHint">The owner manages the vault and its secrets. You only get access if you choose yourself.</p>
         }
-      </select>
-      @if (form.ownerId().invalid() && form.ownerId().touched()) {
-        <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@vaultForm.ownerRequired">Choose who manages this vault.</p>
-      } @else {
-        <p class="mt-1 text-xs text-slate-500" i18n="@@vaultForm.ownerHint">The owner manages the vault and its secrets. You only get access if you choose yourself.</p>
-      }
-    </div>
-
+      </div>
+    }
+    
     @if (error(); as message) {
       <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{{ message }}</p>
     }

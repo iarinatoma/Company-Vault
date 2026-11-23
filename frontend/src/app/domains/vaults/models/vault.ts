@@ -19,3 +19,18 @@ export interface CreateVaultInput {
   readonly description: string | null;
   readonly ownerId: string;
 }
+
+
+/** A new project vault: a project owner leaves `ownerId` empty (they become the owner); an admin chooses one. */
+export interface CreateProjectVaultInput {
+  readonly name: string;
+  readonly description: string | null;
+  readonly ownerId: string | null;
+}
+
+/** One row of "who has access to this vault?". */
+export interface VaultMember {
+  readonly userId: string;
+  readonly email: string;
+  readonly accessLevel: AccessLevel;
+}

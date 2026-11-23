@@ -18,10 +18,8 @@ export class Home implements OnInit {
   protected readonly user = inject(AuthStore).user;
   protected readonly store = inject(UsersStore);
 
-  protected readonly canList = computed(() => {
-    const role = this.user()?.role;
-    return role === 'ADMINISTRATOR' || role === 'PROJECT_OWNER';
-  });
+  // Only administrators may list users (GET /api/v1/users is ADMIN-only in the backend).
+  protected readonly canList = computed(() => this.user()?.role === 'ADMINISTRATOR');
   protected readonly canWrite = computed(() => this.user()?.role === 'ADMINISTRATOR');
 
   protected readonly editing = signal<User | 'new' | null>(null);
