@@ -82,6 +82,36 @@ describe('SecretsStore', () => {
     expect(store.revealed().has('secret-1')).toBe(false);
   });
 
+  it('does not expose previously loaded secrets after access to another vault is forbidden', async () => {
+    const shown = store.reveal('secret-1');
+    http.expectOne(`${BASE}/secret-1/value`).flush({ value: 's3cr3t' });
+    await shown;
+
+    const loaded = store.load('vault-2');
+    http
+      .expectOne('/api/v1/vaults/vault-2/secrets')
+      .flush({ code: 'FORBIDDEN' }, { status: 403, statusText: 'Forbidden' });
+    http
+      .expectOne('/api/v1/vaults/vault-2/folders')
+      .flush({ code: 'FORBIDDEN' }, { status: 403, statusText: 'Forbidden' });
+    await loaded;
+
+    expect(store.items()).toEqual([]);
+    expect(store.revealed().size).toBe(0);
+    expect(store.loadError()).toBe('You are not allowed to do this.');
+  });
+
+  it('does not cache a secret value when the server forbids revealing it', async () => {
+    const shown = store.reveal('secret-1');
+    http
+      .expectOne(`${BASE}/secret-1/value`)
+      .flush({ code: 'FORBIDDEN' }, { status: 403, statusText: 'Forbidden' });
+    await shown;
+
+    expect(store.revealed().has('secret-1')).toBe(false);
+    expect(store.saveError()).toBe('You are not allowed to do this.');
+  });
+
   it('reloads secrets and folders after creating a secret', async () => {
     const created = store.create({ name: 'API key', value: 'abc' });
     http.expectOne({ method: 'POST', url: BASE }).flush(SECRET);

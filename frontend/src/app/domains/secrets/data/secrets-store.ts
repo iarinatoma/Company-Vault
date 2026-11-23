@@ -74,6 +74,7 @@ export class SecretsStore {
 
   async load(vaultId: string): Promise<void> {
     this.vaultId = vaultId;
+    this._items.set([]);
     this._revealed.set(new Map());
     this._selectedFolder.set('ALL');
     this._searchQuery.set('');
