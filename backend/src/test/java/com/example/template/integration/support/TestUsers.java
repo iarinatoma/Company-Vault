@@ -64,5 +64,17 @@ public final class TestUsers {
     /** The project vault the manager holds MANAGE on. */
     public static final UUID MEMBERS_VAULT_ID = UUID.fromString("f5f5f5f5-0000-0000-0000-000000000001");
 
+
+    // datasets/secrets.yml
+    public static final String SECRETS_WRITER_EMAIL = "secrets-writer@test.local";
+    public static final String SECRETS_READER_EMAIL = "secrets-reader@test.local";
+    public static final String SECRETS_MANAGER_EMAIL = "secrets-manager@test.local";
+    public static final String SECRETS_OUTSIDER_EMAIL = "secrets-outsider@test.local";
+    public static final String SECRETS_AUDITOR_EMAIL = "secrets-auditor@test.local";
+    /** Writer WRITE, reader READ, manager MANAGE, auditor READ (still blocked by role). */
+    public static final UUID SECRETS_VAULT_ID = UUID.fromString("a2a2a2a2-0000-0000-0000-000000000001");
+    /** Archived — read-only; the writer holds WRITE on it. */
+    public static final UUID SECRETS_ARCHIVED_VAULT_ID = UUID.fromString("a2a2a2a2-0000-0000-0000-000000000002");
+
     private TestUsers() {}
 }

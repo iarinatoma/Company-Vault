@@ -4,9 +4,10 @@ import { email, form, FormField, required, schema, submit } from '@angular/forms
 import { RouterLink } from '@angular/router';
 import { ConfirmDialog } from '@app/home/ui/confirm-dialog/confirm-dialog';
 import { AuthStore } from '@app/shared/auth/data/auth-store';
-import { AccessLevel } from '@app/shared/auth/models/access';
+import { AccessLevel, hasAccess } from '@app/shared/auth/models/access';
 import { VaultDetailStore } from '@app/vaults/data/vault-detail-store';
 import { VaultMember } from '@app/vaults/models/vault';
+import { SecretsPanel } from '@app/secrets/ui/secrets-panel/secrets-panel';
 
 interface MemberFormModel {
   email: string;
@@ -16,7 +17,7 @@ interface MemberFormModel {
 /** One vault: its metadata and, for managers and administrators, who has access (spec 4.4). */
 @Component({
   selector: 'app-vault-detail',
-  imports: [DatePipe, RouterLink, FormField, ConfirmDialog],
+  imports: [DatePipe, RouterLink, FormField, ConfirmDialog, SecretsPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './vault-detail.html',
 })
@@ -28,6 +29,7 @@ export class VaultDetail implements OnInit {
   private readonly user = inject(AuthStore).user;
 
   protected readonly isAdmin = computed(() => this.user()?.role === 'ADMINISTRATOR');
+  protected readonly hasAccess = hasAccess;  
   protected readonly grantableLevels: readonly AccessLevel[] = ['READ', 'WRITE', 'MANAGE'];
   protected readonly removing = signal<VaultMember | null>(null);
 
