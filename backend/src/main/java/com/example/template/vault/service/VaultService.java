@@ -86,6 +86,12 @@ public class VaultService {
         return create(principal, VaultType.PROJECT, request.name(), request.description(), ownerId);
     }
 
+    /** Creates the registering user's personal vault and makes them its manager. */
+    @Transactional
+    public VaultResponse createPersonal(AuthPrincipal owner) {
+        return create(owner, VaultType.PERSONAL, "Personal vault", null, owner.userId());
+    }
+
     /** Stores the vault, creates its data key and gives the owner MANAGE — shared by every vault type. */
     private VaultResponse create(
             AuthPrincipal creator, VaultType type, String name, @Nullable String description, UUID ownerId) {

@@ -15,6 +15,7 @@ import com.example.template.user.event.UserDeletedEvent;
 import com.example.template.user.mapper.UserMapper;
 import com.example.template.user.model.User;
 import com.example.template.user.repository.UserRepository;
+import com.example.template.vault.service.VaultService;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordResetService passwordResetService;
+    private final VaultService vaultService;
 
     public UserService(
             UserRepository userRepository,
@@ -47,13 +49,15 @@ public class UserService {
             ScopeAccessGuard scopeAccessGuard,
             PasswordEncoder passwordEncoder,
             ApplicationEventPublisher eventPublisher,
-            PasswordResetService passwordResetService) {
+            PasswordResetService passwordResetService,
+            VaultService vaultService) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.scopeAccessGuard = scopeAccessGuard;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
         this.passwordResetService = passwordResetService;
+        this.vaultService = vaultService;
     }
 
     @Transactional(readOnly = true)
@@ -102,9 +106,12 @@ public class UserService {
         var saved = userRepository.save(user);
         log.info("User {} created with role {}", saved.requireId(), saved.getRole());
         eventPublisher.publishEvent(new UserCreatedEvent(saved.requireId(), saved.getEmail()));
+        if (role != Role.AUDITOR) {
+            vaultService.createPersonal(new AuthPrincipal(saved.requireId(), saved.getEmail(), role));
+        }
         return saved;
     }
-
+    
     @Transactional
     public UserResponse update(AuthPrincipal principal, UUID id, UpdateUserRequest request) {
         var user = userRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));

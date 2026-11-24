@@ -12,3 +12,5 @@ export const vaultsRoutes: Routes = [
     component: VaultDetail,
   },
 ];
+  { path: ':vaultId', component: VaultDetail },
+];

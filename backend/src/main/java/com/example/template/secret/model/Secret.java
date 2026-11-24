@@ -4,17 +4,13 @@ import com.example.template.shared.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.jspecify.annotations.Nullable;
 
-/**
- * A secret in a vault. Only the name is plain text (listable and searchable); the value is stored
- * encrypted with the vault's data key and is decrypted only on an explicit reveal. The vault is a
- * plain UUID column — the foreign key lives in Liquibase, entities never cross feature boundaries.
- */
 @Entity
 @Table(name = "secrets")
 @Getter
@@ -25,8 +21,21 @@ public class Secret extends BaseEntity {
     @Column(name = "vault_id", nullable = false)
     private UUID vaultId;
 
+    @Column(name = "folder_id")
+    private @Nullable UUID folderId;
+
     @Column(nullable = false, length = 200)
     private String name;
+
+    @Column(length = 1000)
+    private @Nullable String description;
+
+    /** Normalized comma-separated lowercase tags (e.g. "prod,aws,db") for plaintext metadata search. */
+    @Column(name = "tags")
+    private @Nullable String tags;
+
+    @Column(name = "expires_at")
+    private @Nullable Instant expiresAt;
 
     /** Base64 of nonce || ciphertext || tag — never the plain value, never logged. */
     @Column(name = "encrypted_value", nullable = false)
