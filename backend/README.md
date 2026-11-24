@@ -101,6 +101,19 @@ environment, use an SMTP provider with a verified sender domain, and configure
 `SMTP_STARTTLS`, `EMAIL_FROM`, and `PASSWORD_SETUP_LINK_BASE_URL` in the deployment environment.
 Never commit provider credentials. The frontend submits only the email address and provides
 the password setup page at the configured link URL.
+
+### Secret types
+
+Every secret has a `type`: `LOGIN`, `API_KEY` (the default), `NOTE` or `CUSTOM`. `value` is always
+the main value (the password of a login, the key or token, the text of a note) and is encrypted
+with the vault's data key. A `LOGIN` can also have `fields.username` and `fields.url`, and every
+type can have up to 20 custom key-value fields in `fields.customFields`. These fields are stored as
+JSON in `secrets.encrypted_fields`, encrypted with the same data key. Only the type is plain
+metadata, so the secret list shows it without decrypting anything. Only the explicit reveal,
+`GET /api/v1/vaults/{vaultId}/secrets/{secretId}/value`, returns `value` and `fields`. On an edit,
+a missing `type` or `fields` keeps the current one. Secrets created before secret types existed
+are `API_KEY` without fields.
+
 ### Key rotation
 
 **Master key.** Only the wrapped DEKs and the TOTP secrets are encrypted directly with the master
