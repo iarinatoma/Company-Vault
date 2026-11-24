@@ -92,6 +92,14 @@ Teams must design and document a key management scheme:
 - **Transport security:** HTTPS/TLS only.
 - **Server-side encryption model:** the server holds the keys, and the admin can recover access. Document key rotation and recovery.
 
+#### Implemented key scheme
+
+The backend implements envelope encryption with a separate random 32-byte DEK for each vault/project resource. The master key is loaded from `ENCRYPTION_KEY` or, alternatively, from a mounted `ENCRYPTION_KEY` file under `SECRETS_DIR` (default `/run/secrets/`). Its value is base64-encoded and must decode to exactly 32 bytes. The master key is held outside the database and repository.
+
+The DEK is stored in the `data_keys` table only after being encrypted (wrapped) with the master key. When a secret is written or read, the backend unwraps that resource's DEK in memory and uses it to encrypt or decrypt the secret with AES-256-GCM. Each encryption uses a fresh random 12-byte nonce and a 16-byte authentication tag; the stored base64 value contains the nonce, ciphertext, and tag. Authentication failure, a wrong key, or tampered ciphertext causes decryption to fail.
+
+Deleting a resource's DEK makes every secret encrypted with it permanently unreadable. The master key itself is never persisted in the database or repository; losing it also prevents the stored DEKs and their secrets from being decrypted.
+
 ## 5. Non-Functional Requirements
 
 - **Security first:** OWASP Top 10 awareness, parameterised queries, output encoding, CSRF/XSS protection, secure HTTP headers.

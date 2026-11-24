@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * The second half of the double enforcement: {@code @PreAuthorize} on the controller declares
  * the role rule; every service method touching scoped data must take its decision from here.
+ *
  * A scoped service method that never consults this guard is an isolation hole even when the
  * annotation looks right. The switches are exhaustive on purpose — adding a role must fail
  * compilation here.
@@ -21,8 +22,8 @@ public class ScopeAccessGuard {
     public void requireScopeAccess(AuthPrincipal principal, UUID ownerId) {
         boolean allowed =
                 switch (principal.role()) {
-                    case ADMIN, MANAGER -> true;
-                    case USER -> principal.userId().equals(ownerId);
+                    case ADMINISTRATOR, PROJECT_OWNER -> true;
+                    case MEMBER, AUDITOR -> principal.userId().equals(ownerId);
                 };
         if (!allowed) {
             throw new ApiException(ErrorCode.FORBIDDEN);
@@ -35,8 +36,8 @@ public class ScopeAccessGuard {
     public void requireAllScopes(AuthPrincipal principal) {
         boolean allowed =
                 switch (principal.role()) {
-                    case ADMIN, MANAGER -> true;
-                    case USER -> false;
+                    case ADMINISTRATOR, PROJECT_OWNER -> true;
+                    case MEMBER, AUDITOR -> false;
                 };
         if (!allowed) {
             throw new ApiException(ErrorCode.FORBIDDEN);

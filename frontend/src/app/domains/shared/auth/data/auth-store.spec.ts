@@ -7,7 +7,7 @@ import { AuthStore } from './auth-store';
 const user: User = {
   id: '1',
   email: 'admin@example.com',
-  role: 'ADMIN',
+  role: 'ADMINISTRATOR',
   twoFactorEnabled: false,
   createdAt: '2026-08-12T00:00:00Z',
 };
@@ -30,6 +30,8 @@ describe('AuthStore', () => {
   it('starts logged out', () => {
     expect(auth.isLoggedIn()).toBe(false);
     expect(auth.accessToken()).toBeNull();
+    expect(auth.userRole()).toBeNull();
+    expect(auth.hasRole(['ADMINISTRATOR'])).toBe(false);
   });
 
   it('logs in, keeps the token in memory and loads the profile', async () => {
@@ -44,6 +46,9 @@ describe('AuthStore', () => {
     expect(auth.isLoggedIn()).toBe(true);
     expect(auth.user()?.email).toBe(user.email);
     expect(auth.accessToken()).toBe('access-1');
+    expect(auth.userRole()).toBe('ADMINISTRATOR');
+    expect(auth.hasRole(['ADMINISTRATOR'])).toBe(true);
+    expect(auth.hasRole(['MEMBER', 'AUDITOR'])).toBe(false);
   });
 
   it('reports a pending two-factor challenge without logging in', async () => {

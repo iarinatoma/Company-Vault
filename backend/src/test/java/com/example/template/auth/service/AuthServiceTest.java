@@ -118,7 +118,7 @@ class AuthServiceTest {
         ReflectionTestUtils.setField(user, "id", USER_ID);
         user.setEmail(EMAIL);
         user.setPasswordHash(PASSWORD_HASH);
-        user.setRole(Role.USER);
+        user.setRole(Role.MEMBER);
         return user;
     }
 
@@ -144,7 +144,7 @@ class AuthServiceTest {
     private void stubIssuedPair() {
         var issued = new RefreshTokenService.IssuedRefreshToken(RAW_REFRESH_TOKEN, new RefreshToken());
         when(refreshTokenService.issue(any(), any())).thenReturn(issued);
-        when(jwtService.mintAccessToken(USER_ID, EMAIL, Role.USER)).thenReturn(ACCESS_TOKEN);
+        when(jwtService.mintAccessToken(USER_ID, EMAIL, Role.MEMBER)).thenReturn(ACCESS_TOKEN);
     }
 
     @Nested
@@ -419,7 +419,7 @@ class AuthServiceTest {
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             var issued = new RefreshTokenService.IssuedRefreshToken(RAW_REFRESH_TOKEN, new RefreshToken());
             when(refreshTokenService.issue(USER_ID, FAMILY_ID, sessionExpiry)).thenReturn(issued);
-            when(jwtService.mintAccessToken(USER_ID, EMAIL, Role.USER)).thenReturn(ACCESS_TOKEN);
+            when(jwtService.mintAccessToken(USER_ID, EMAIL, Role.MEMBER)).thenReturn(ACCESS_TOKEN);
 
             var result = authService.refresh(RAW_REFRESH_TOKEN);
 

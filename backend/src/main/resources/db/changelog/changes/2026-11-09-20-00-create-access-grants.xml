@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Who has which access level (NO_ACCESS/READ/WRITE/MANAGE) on which resource. Generic:
+         resource_type + resource_id point at a vault, project, folder or secret, so there is no
+         foreign key on resource_id. One row per user and resource; no row means NO_ACCESS. -->
+    <changeSet id="2026-11-09-20-00-create-access-grants" author="iarina-toma">
+        <createTable tableName="access_grants">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="uuid">
+                <constraints nullable="false"
+                             foreignKeyName="fk_access_grants_user"
+                             references="users(id)"/>
+            </column>
+            <column name="resource_type" type="varchar(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="access_level" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="access_grants"
+                             columnNames="user_id, resource_type, resource_id"
+                             constraintName="uq_access_grants_user_resource"/>
+        <createIndex tableName="access_grants" indexName="ix_access_grants_resource">
+            <column name="resource_type"/>
+            <column name="resource_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -3,11 +3,14 @@ package com.example.template.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.template.auth.service.PasswordResetService;
 import com.example.template.shared.error.ApiException;
 import com.example.template.shared.error.ErrorCode;
 import com.example.template.shared.security.AuthPrincipal;
@@ -22,6 +25,7 @@ import com.example.template.user.event.UserDeletedEvent;
 import com.example.template.user.mapper.UserMapper;
 import com.example.template.user.model.User;
 import com.example.template.user.repository.UserRepository;
+import com.example.template.vault.service.VaultService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -61,22 +65,28 @@ class UserServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private PasswordResetService passwordResetService;
+
+    @Mock
+    private VaultService vaultService;
+
     @InjectMocks
     private UserService userService;
 
     private static final UUID CALLER_ID = UUID.randomUUID();
-    private static final AuthPrincipal PRINCIPAL = new AuthPrincipal(CALLER_ID, "caller@example.com", Role.USER);
+    private static final AuthPrincipal PRINCIPAL = new AuthPrincipal(CALLER_ID, "caller@example.com", Role.MEMBER);
 
     private static User user() {
         var user = new User();
         user.setEmail("someone@example.com");
         user.setPasswordHash("{bcrypt}hash");
-        user.setRole(Role.USER);
+        user.setRole(Role.MEMBER);
         return user;
     }
 
     private static UserResponse response(String email) {
-        return new UserResponse(UUID.randomUUID(), email, Role.USER, false, Instant.now());
+        return new UserResponse(UUID.randomUUID(), email, Role.MEMBER, false, Instant.now());
     }
 
     @Nested
@@ -164,7 +174,7 @@ class UserServiceTest {
     class CreateTests {
 
         private final CreateUserRequest request =
-                new CreateUserRequest("new@example.com", "long-password-123", Role.USER);
+                new CreateUserRequest("new@example.com", "long-password-123", Role.MEMBER);
 
         @Test
         @DisplayName("encodes the password, saves, publishes UserCreatedEvent and returns the mapped DTO")
@@ -186,6 +196,7 @@ class UserServiceTest {
             verify(userRepository).save(savedUser.capture());
             assertThat(savedUser.getValue().getPasswordHash()).isEqualTo("{bcrypt}encoded");
             verify(eventPublisher).publishEvent(any(UserCreatedEvent.class));
+            verify(vaultService).createPersonal(any(AuthPrincipal.class));
         }
 
         @Test
@@ -207,11 +218,11 @@ class UserServiceTest {
     class RegisterTests {
 
         @Test
-        @DisplayName("creates a standard user and never lets registration choose a privileged role")
+        @DisplayName("creates a standard user with a random password and requests a setup link")
         void register_emailFree_createsUserRole() {
-            var request = new RegisterUserRequest("new@example.com", "long-password-123");
+            var request = new RegisterUserRequest("new@example.com");
             when(userRepository.existsByEmail(request.email())).thenReturn(false);
-            when(passwordEncoder.encode(request.password())).thenReturn("{bcrypt}encoded");
+            when(passwordEncoder.encode(anyString())).thenReturn("{bcrypt}encoded");
             when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
                 var saved = invocation.getArgument(0, User.class);
                 ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
@@ -221,12 +232,19 @@ class UserServiceTest {
 
             var created = userService.register(request);
 
-            assertThat(created.role()).isEqualTo(Role.USER);
+            assertThat(created.role()).isEqualTo(Role.MEMBER);
             var savedUser = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(savedUser.capture());
-            assertThat(savedUser.getValue().getRole()).isEqualTo(Role.USER);
+            assertThat(savedUser.getValue().getRole()).isEqualTo(Role.MEMBER);
             assertThat(savedUser.getValue().getPasswordHash()).isEqualTo("{bcrypt}encoded");
+            verify(passwordEncoder).encode(anyString());
             verify(eventPublisher).publishEvent(any(UserCreatedEvent.class));
+            var setupUserId = ArgumentCaptor.forClass(UUID.class);
+            verify(passwordResetService).requestPasswordSetup(setupUserId.capture(), eq(request.email()));
+            assertThat(setupUserId.getValue()).isEqualTo(savedUser.getValue().requireId());
+            verify(vaultService)
+                    .createPersonal(new AuthPrincipal(
+                            savedUser.getValue().requireId(), savedUser.getValue().getEmail(), savedUser.getValue().getRole()));
         }
     }
 
@@ -245,10 +263,10 @@ class UserServiceTest {
             when(userRepository.save(target)).thenReturn(target);
             when(userMapper.toResponse(target)).thenReturn(response("new@example.com"));
 
-            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("new@example.com", Role.MANAGER, null));
+            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("new@example.com", Role.PROJECT_OWNER, null));
 
             assertThat(target.getEmail()).isEqualTo("new@example.com");
-            assertThat(target.getRole()).isEqualTo(Role.MANAGER);
+            assertThat(target.getRole()).isEqualTo(Role.PROJECT_OWNER);
             assertThat(target.getPasswordHash()).isEqualTo("{bcrypt}hash");
             verify(passwordEncoder, never()).encode(any());
         }
@@ -263,7 +281,7 @@ class UserServiceTest {
             when(userMapper.toResponse(target)).thenReturn(response(target.getEmail()));
 
             userService.update(
-                    PRINCIPAL, targetId, new UpdateUserRequest(target.getEmail(), Role.USER, "another-long-password"));
+                    PRINCIPAL, targetId, new UpdateUserRequest(target.getEmail(), Role.MEMBER, "another-long-password"));
 
             assertThat(target.getPasswordHash()).isEqualTo("{bcrypt}new");
         }
@@ -275,7 +293,7 @@ class UserServiceTest {
             when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
 
             assertThatThrownBy(() ->
-                            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("taken@example.com", Role.USER, null)))
+                            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("taken@example.com", Role.MEMBER, null)))
                     .isInstanceOf(ApiException.class)
                     .extracting(exception -> ((ApiException) exception).errorCode())
                     .isEqualTo(ErrorCode.EMAIL_ALREADY_IN_USE);
@@ -289,7 +307,7 @@ class UserServiceTest {
             when(userRepository.findById(CALLER_ID)).thenReturn(Optional.of(self));
 
             assertThatThrownBy(() ->
-                            userService.update(PRINCIPAL, CALLER_ID, new UpdateUserRequest(self.getEmail(), Role.ADMIN, null)))
+                            userService.update(PRINCIPAL, CALLER_ID, new UpdateUserRequest(self.getEmail(), Role.ADMINISTRATOR, null)))
                     .isInstanceOf(ApiException.class)
                     .extracting(exception -> ((ApiException) exception).errorCode())
                     .isEqualTo(ErrorCode.CANNOT_MODIFY_OWN_ACCOUNT);
@@ -301,7 +319,7 @@ class UserServiceTest {
             when(userRepository.findById(targetId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() ->
-                            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("a@example.com", Role.USER, null)))
+                            userService.update(PRINCIPAL, targetId, new UpdateUserRequest("a@example.com", Role.MEMBER, null)))
                     .isInstanceOf(ApiException.class)
                     .extracting(exception -> ((ApiException) exception).errorCode())
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);

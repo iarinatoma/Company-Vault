@@ -51,7 +51,7 @@ class TotpServiceTest {
         var user = new User();
         user.setEmail("someone@example.com");
         user.setPasswordHash("{bcrypt}hash");
-        user.setRole(Role.USER);
+        user.setRole(Role.MEMBER);
         ReflectionTestUtils.setField(user, "id", USER_ID);
         return user;
     }

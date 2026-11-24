@@ -26,13 +26,13 @@ class UserMapperTest {
             var user = new User();
             user.setEmail("someone@example.com");
             user.setPasswordHash("{bcrypt}secret");
-            user.setRole(Role.MANAGER);
+            user.setRole(Role.PROJECT_OWNER);
             user.setTwoFactorEnabled(true);
 
             var response = userMapper.toResponse(user);
 
             assertThat(response.email()).isEqualTo("someone@example.com");
-            assertThat(response.role()).isEqualTo(Role.MANAGER);
+            assertThat(response.role()).isEqualTo(Role.PROJECT_OWNER);
             assertThat(response.twoFactorEnabled()).isTrue();
         }
     }

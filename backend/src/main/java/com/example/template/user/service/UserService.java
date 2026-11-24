@@ -1,5 +1,6 @@
 package com.example.template.user.service;
 
+import com.example.template.auth.service.PasswordResetService;
 import com.example.template.shared.error.ApiException;
 import com.example.template.shared.error.ErrorCode;
 import com.example.template.shared.security.AuthPrincipal;
@@ -14,6 +15,7 @@ import com.example.template.user.event.UserDeletedEvent;
 import com.example.template.user.mapper.UserMapper;
 import com.example.template.user.model.User;
 import com.example.template.user.repository.UserRepository;
+import com.example.template.vault.service.VaultService;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,18 +40,24 @@ public class UserService {
     private final ScopeAccessGuard scopeAccessGuard;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final PasswordResetService passwordResetService;
+    private final VaultService vaultService;
 
     public UserService(
             UserRepository userRepository,
             UserMapper userMapper,
             ScopeAccessGuard scopeAccessGuard,
             PasswordEncoder passwordEncoder,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            PasswordResetService passwordResetService,
+            VaultService vaultService) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.scopeAccessGuard = scopeAccessGuard;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
+        this.passwordResetService = passwordResetService;
+        this.vaultService = vaultService;
     }
 
     @Transactional(readOnly = true)
@@ -77,15 +85,17 @@ public class UserService {
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
-        return createUser(request.email(), request.password(), request.role());
+        return userMapper.toResponse(createUser(request.email(), request.password(), request.role()));
     }
 
     @Transactional
     public UserResponse register(RegisterUserRequest request) {
-        return createUser(request.email(), request.password(), Role.USER);
+        var user = createUser(request.email(), UUID.randomUUID().toString(), Role.MEMBER);
+        passwordResetService.requestPasswordSetup(user.requireId(), user.getEmail());
+        return userMapper.toResponse(user);
     }
 
-    private UserResponse createUser(String email, String password, Role role) {
+    private User createUser(String email, String password, Role role) {
         if (userRepository.existsByEmail(email)) {
             throw new ApiException(ErrorCode.EMAIL_ALREADY_IN_USE);
         }
@@ -96,9 +106,12 @@ public class UserService {
         var saved = userRepository.save(user);
         log.info("User {} created with role {}", saved.requireId(), saved.getRole());
         eventPublisher.publishEvent(new UserCreatedEvent(saved.requireId(), saved.getEmail()));
-        return userMapper.toResponse(saved);
+        if (role != Role.AUDITOR) {
+            vaultService.createPersonal(new AuthPrincipal(saved.requireId(), saved.getEmail(), role));
+        }
+        return saved;
     }
-
+    
     @Transactional
     public UserResponse update(AuthPrincipal principal, UUID id, UpdateUserRequest request) {
         var user = userRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));

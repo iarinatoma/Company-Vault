@@ -6,10 +6,11 @@ import { UserInput } from '@app/home/data/users-client';
 import { UsersStore } from '@app/home/data/users-store';
 import { ConfirmDialog } from '@app/home/ui/confirm-dialog/confirm-dialog';
 import { UserForm } from '@app/home/ui/user-form/user-form';
+import { MasterKeyBackup } from './master-key-backup';
 
 @Component({
   selector: 'app-home',
-  imports: [DatePipe, UserForm, ConfirmDialog],
+  imports: [DatePipe, UserForm, ConfirmDialog, MasterKeyBackup],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',
 })
@@ -17,11 +18,9 @@ export class Home implements OnInit {
   protected readonly user = inject(AuthStore).user;
   protected readonly store = inject(UsersStore);
 
-  protected readonly canList = computed(() => {
-    const role = this.user()?.role;
-    return role === 'ADMIN' || role === 'MANAGER';
-  });
-  protected readonly canWrite = computed(() => this.user()?.role === 'ADMIN');
+  // Only administrators may list users (GET /api/v1/users is ADMIN-only in the backend).
+  protected readonly canList = computed(() => this.user()?.role === 'ADMINISTRATOR');
+  protected readonly canWrite = computed(() => this.user()?.role === 'ADMINISTRATOR');
 
   protected readonly editing = signal<User | 'new' | null>(null);
   protected readonly editTarget = computed(() => {
