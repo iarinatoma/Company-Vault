@@ -21,9 +21,6 @@ public class Secret extends BaseEntity {
     @Column(name = "vault_id", nullable = false)
     private UUID vaultId;
 
-    @Column(name = "folder_id")
-    private @Nullable UUID folderId;
-
     @Column(nullable = false, length = 200)
     private String name;
 

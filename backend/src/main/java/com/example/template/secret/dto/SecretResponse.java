@@ -9,7 +9,6 @@ import org.jspecify.annotations.Nullable;
 public record SecretResponse(
         UUID id,
         UUID vaultId,
-        @Nullable UUID folderId,
         String name,
         @Nullable String description,
         List<String> tags,

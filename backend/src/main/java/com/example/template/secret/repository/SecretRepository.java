@@ -15,8 +15,6 @@ public interface SecretRepository extends JpaRepository<Secret, UUID> {
 
     Optional<Secret> findByIdAndVaultId(UUID id, UUID vaultId);
 
-    /** Deletes all secret metadata and ciphertext rows belonging to a vault being deleted. */
-    void deleteAllByVaultId(UUID vaultId);
     long countByVaultIdAndFolderId(UUID vaultId, UUID folderId);
 
     @Modifying
