@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.template.vault.model.VaultType;
 
 /**
  * Who may use a vault (spec 3 and 4.4): members with MANAGE add, change and remove members;
@@ -88,6 +89,9 @@ public class VaultMemberService {
     }
 
     private VaultMemberResponse setLevel(AuthPrincipal principal, ResourceRef vault, User user, AccessLevel level) {
+        if (level != AccessLevel.NO_ACCESS) {
+            requireShareable(vault.id());
+        }
         if (user.getRole() == Role.AUDITOR && level != AccessLevel.NO_ACCESS) {
             throw new ApiException(ErrorCode.VALIDATION_FAILED, "Auditors never get access to secrets");
         }
@@ -95,6 +99,15 @@ public class VaultMemberService {
         accessControl.grant(user.requireId(), vault, level);
         log.info("User {} set to {} on vault {} by {}", user.requireId(), level, vault.id(), principal.userId());
         return new VaultMemberResponse(user.requireId(), user.getEmail(), level);
+    }
+
+    /** A personal vault is private to its owner (spec 4.2): nobody — not even an administrator — can be given access. */
+    private void requireShareable(UUID vaultId) {
+        vaultRepository.findById(vaultId)
+                .filter(found -> found.getType() == VaultType.PERSONAL)
+                .ifPresent(found -> {
+                    throw new ApiException(ErrorCode.VALIDATION_FAILED, "A personal vault cannot be shared");
+                });
     }
 
     /** Managers of the vault — and administrators, to recover access (logged as a warning for the audit trail). */
