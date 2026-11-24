@@ -159,4 +159,23 @@ describe('SecretsStore', () => {
     http.expectOne({ method: 'GET', url: FOLDERS_BASE }).flush([FOLDER]);
     expect(await removed).toBe(true);
   });
+
+
+  it('matches search query against description case-insensitively', () => {
+    store.setSearchQuery('PRIMARY db');
+    expect(store.filteredItems()).toEqual([SECRET]);
+
+    store.setSearchQuery('nonexistent description');
+    expect(store.filteredItems()).toEqual([]);
+  });
+
+  it('never matches revealed secret values when searching', async () => {
+    const shown = store.reveal('secret-1');
+    http.expectOne(`${BASE}/secret-1/value`).flush({ value: 'top-secret-password-999' });
+    await shown;
+    expect(store.revealed().get('secret-1')).toBe('top-secret-password-999');
+
+    store.setSearchQuery('top-secret-password-999');
+    expect(store.filteredItems()).toEqual([]);
+  });
 });
