@@ -101,13 +101,19 @@ public class VaultMemberService {
         return new VaultMemberResponse(user.requireId(), user.getEmail(), level);
     }
 
-    /** A personal vault is private to its owner (spec 4.2): nobody — not even an administrator — can be given access. */
+    /**
+     * Nobody can be given access to a personal vault (private to its owner, spec 4.2) or to an
+     * archived vault (read-only). Removing someone is always allowed.
+     */
     private void requireShareable(UUID vaultId) {
-        vaultRepository.findById(vaultId)
-                .filter(found -> found.getType() == VaultType.PERSONAL)
-                .ifPresent(found -> {
-                    throw new ApiException(ErrorCode.VALIDATION_FAILED, "A personal vault cannot be shared");
-                });
+        vaultRepository.findById(vaultId).ifPresent(found -> {
+            if (found.getType() == VaultType.PERSONAL) {
+                throw new ApiException(ErrorCode.VALIDATION_FAILED, "A personal vault cannot be shared");
+            }
+            if (found.isArchived()) {
+                throw new ApiException(ErrorCode.VAULT_ARCHIVED);
+            }
+        });
     }
 
     /** Managers of the vault — and administrators, to recover access (logged as a warning for the audit trail). */

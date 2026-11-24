@@ -10,29 +10,31 @@
       <div class="flex items-center gap-3">
         <h1 class="text-2xl font-semibold tracking-tight">{{ vault.name }}</h1>
         <span class="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">{{ vault.type }}</span>
-        @if (hasAccess(vault.accessLevel, 'WRITE') && !vault.archived) {
-          <button
-            type="button"
-            class="text-sm font-medium text-indigo-600 hover:text-indigo-500"
-            (click)="openRename()"
-            i18n="@@vaultDetail.rename"
-          >Rename</button>
-        }
-        @if (hasAccess(vault.accessLevel, 'MANAGE') && vault.type !== 'PERSONAL') {
+        @if (hasAccess(vault.accessLevel, 'MANAGE')) {
           @if (!vault.archived) {
             <button
               type="button"
-              class="text-sm font-medium text-slate-700 hover:text-slate-900"
-              (click)="archiving.set(true)"
-              i18n="@@vaultDetail.archive"
-            >Archive</button>
+              class="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              (click)="openRename()"
+              i18n="@@vaultDetail.rename"
+            >Rename</button>
           }
-          <button
-            type="button"
-            class="text-sm font-medium text-red-600 hover:text-red-500"
-            (click)="deleting.set(true)"
-            i18n="@@vaultDetail.delete"
-          >Delete</button>
+          @if (vault.type !== 'PERSONAL') {
+            @if (!vault.archived) {
+              <button
+                type="button"
+                class="text-sm font-medium text-slate-700 hover:text-slate-900"
+                (click)="archiving.set(true)"
+                i18n="@@vaultDetail.archive"
+              >Archive</button>
+            }
+            <button
+              type="button"
+              class="text-sm font-medium text-red-600 hover:text-red-500"
+              (click)="deleting.set(true)"
+              i18n="@@vaultDetail.delete"
+            >Delete</button>
+          }
         }
       </div>
       @if (vault.description) {
@@ -67,7 +69,7 @@
                 <select
                   class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm"
                   [value]="member.accessLevel"
-                  [disabled]="store.saving()"
+                  [disabled]="store.saving() || vault.archived"
                   (change)="changeLevel(member, $event)"
                   [attr.aria-label]="member.email"
                 >
@@ -86,39 +88,41 @@
           }
         </ul>
 
-        <form class="flex flex-wrap items-start gap-2 border-t border-slate-200 px-6 py-4" novalidate (submit)="$event.preventDefault(); addMember()">
-          <div class="min-w-48 flex-1">
-            <label for="member-email" class="sr-only" i18n="@@vaultDetail.memberEmail">E-mail</label>
-            <input
-              id="member-email"
-              type="email"
-              autocomplete="off"
-              placeholder="colleague@company.com"
-              class="block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-              [formField]="memberForm.email"
-            />
-            @if (memberForm.email().invalid() && newMember().email !== '') {
-              <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@vaultDetail.emailInvalid">Enter a valid e-mail address.</p>
-            }
-          </div>
-          <label for="member-level" class="sr-only" i18n="@@vaultDetail.memberLevel">Access level</label>
-          <select
-            id="member-level"
-            class="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
-            [formField]="memberForm.accessLevel"
-          >
-            @for (level of grantableLevels; track level) {
-              <option [value]="level">{{ level }}</option>
-            }
-          </select>
-          <button
-            type="submit"
-            class="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-            [disabled]="store.saving()"
-            i18n="@@vaultDetail.add"
-          >Add member</button>
-        </form>
-
+        @if (!vault.archived) {
+          <form class="flex flex-wrap items-start gap-2 border-t border-slate-200 px-6 py-4" novalidate (submit)="$event.preventDefault(); addMember()">
+            <div class="min-w-48 flex-1">
+              <label for="member-email" class="sr-only" i18n="@@vaultDetail.memberEmail">E-mail</label>
+              <input
+                id="member-email"
+                type="email"
+                autocomplete="off"
+                placeholder="colleague@company.com"
+                class="block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                [formField]="memberForm.email"
+              />
+              @if (memberForm.email().invalid() && newMember().email !== '') {
+                <p class="mt-1 text-xs text-red-600" role="alert" i18n="@@vaultDetail.emailInvalid">Enter a valid e-mail address.</p>
+              }
+            </div>
+            <label for="member-level" class="sr-only" i18n="@@vaultDetail.memberLevel">Access level</label>
+            <select
+              id="member-level"
+              class="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
+              [formField]="memberForm.accessLevel"
+            >
+              @for (level of grantableLevels; track level) {
+                <option [value]="level">{{ level }}</option>
+              }
+            </select>
+            <button
+              type="submit"
+              class="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+              [disabled]="store.saving()"
+              i18n="@@vaultDetail.add"
+            >Add member</button>
+          </form>
+        }
+        
         @if (store.saveError(); as message) {
           @if (removing() === null) {
             <p class="mx-6 mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{{ message }}</p>

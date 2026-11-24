@@ -41,6 +41,7 @@ import com.example.template.vault.dto.CreateProjectVaultRequest;
 import com.example.template.access.repository.AccessGrantRepository;
 import com.example.template.folder.repository.FolderRepository;
 import com.example.template.secret.repository.SecretRepository;
+import com.example.template.vault.dto.UpdateVaultRequest;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VaultService")
@@ -333,5 +334,45 @@ class VaultServiceTest {
                 .isEqualTo(ErrorCode.VALIDATION_FAILED);
         verify(envelopeEncryption, never()).deleteKey(any());
         verify(vaultRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("an administrator does not see other users' personal vaults")
+    void list_asAdmin_hidesOtherUsersPersonalVaults() {
+        var general = storedVault("IT Infrastructure");
+        var personal = storedVault("Personal vault");
+        personal.setType(VaultType.PERSONAL);
+        when(vaultRepository.findAllByArchivedFalseOrderByNameAsc()).thenReturn(List.of(general, personal));
+        when(accessControl.levelOf(eq(ADMIN), any())).thenReturn(AccessLevel.NO_ACCESS);
+
+        assertThat(vaultService.list(ADMIN)).extracting("name").containsExactly("IT Infrastructure");
+    }
+
+    @Test
+    @DisplayName("an administrator cannot open someone else's personal vault")
+    void get_asAdminOtherUsersPersonalVault_isForbidden() {
+        var personal = storedVault("Personal vault");
+        personal.setType(VaultType.PERSONAL);
+        var resource = new ResourceRef(ResourceType.VAULT, personal.requireId());
+        when(vaultRepository.findById(personal.requireId())).thenReturn(Optional.of(personal));
+        doThrow(new ApiException(ErrorCode.FORBIDDEN)).when(accessControl).require(ADMIN, resource, AccessLevel.READ);
+
+        assertThatThrownBy(() -> vaultService.get(ADMIN, personal.requireId()))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("renaming needs MANAGE — WRITE is not enough")
+    void update_withoutManage_isForbidden() {
+        UUID id = UUID.randomUUID();
+        doThrow(new ApiException(ErrorCode.FORBIDDEN))
+                .when(accessControl)
+                .require(MEMBER, new ResourceRef(ResourceType.VAULT, id), AccessLevel.MANAGE);
+
+        assertThatThrownBy(() -> vaultService.update(MEMBER, id, new UpdateVaultRequest("New name", null)))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+        verify(vaultRepository, never()).save(any());
     }
 }

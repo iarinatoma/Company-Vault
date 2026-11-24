@@ -116,12 +116,18 @@ public class VaultService {
         return toResponse(vault, accessControl.levelOf(creator, resource));
     }
 
-    /** Admins: every active vault (metadata only). Everyone else: the active vaults they can read. */
+    /**
+     * Admins: every active general and project vault (metadata only) — other users' personal vaults
+     * stay private (spec 4.2). Everyone else: the active vaults they can read.
+     */
     @Transactional(readOnly = true)
     public List<VaultResponse> list(AuthPrincipal principal) {
         List<Vault> vaults;
         if (principal.role() == Role.ADMINISTRATOR) {
-            vaults = vaultRepository.findAllByArchivedFalseOrderByNameAsc();
+            vaults = vaultRepository.findAllByArchivedFalseOrderByNameAsc().stream()
+                    .filter(vault -> vault.getType() != VaultType.PERSONAL
+                            || accessControl.levelOf(principal, refOf(vault)).includes(AccessLevel.READ))
+                    .toList();
         } else {
             var readable = accessControl.resourceIdsOf(principal, ResourceType.VAULT, AccessLevel.READ);
             vaults = readable.isEmpty()
@@ -133,7 +139,10 @@ public class VaultService {
                 .toList();
     }
 
-    /** One vault's metadata. Admins may always see it; everyone else needs at least READ. */
+    /**
+     * One vault's metadata. Admins may see any general or project vault; a personal vault — like
+     * every vault for everyone else — needs at least READ.
+     */
     @Transactional(readOnly = true)
     public VaultResponse get(AuthPrincipal principal, UUID id) {
         var resource = new ResourceRef(ResourceType.VAULT, id);
@@ -141,14 +150,17 @@ public class VaultService {
             accessControl.require(principal, resource, AccessLevel.READ);
         }
         var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        if (principal.role() == Role.ADMINISTRATOR && vault.getType() == VaultType.PERSONAL) {
+            accessControl.require(principal, resource, AccessLevel.READ);
+        }
         return toResponse(vault, accessControl.levelOf(principal, resource));
     }
 
-    /** Renames a vault and updates its description. Needs WRITE and the vault must not be archived. */
+    /** Renames a vault and updates its description. Needs MANAGE and the vault must not be archived. */
     @Transactional
     public VaultResponse update(AuthPrincipal principal, UUID id, UpdateVaultRequest request) {
         var resource = new ResourceRef(ResourceType.VAULT, id);
-        accessControl.require(principal, resource, AccessLevel.WRITE);
+        accessControl.require(principal, resource, AccessLevel.MANAGE);
         var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
         if (vault.isArchived()) {
             throw new ApiException(ErrorCode.VAULT_ARCHIVED);

@@ -223,4 +223,33 @@ class VaultMemberServiceTest {
                 .isEqualTo(ErrorCode.VALIDATION_FAILED);
         verify(accessControl, never()).grant(any(), any(), any());
     }
+
+
+    @Test
+    @DisplayName("nobody can be added to an archived vault")
+    void add_toArchivedVault_isRejected() {
+        var archived = new Vault();
+        archived.setName("Old project");
+        archived.setType(VaultType.PROJECT);
+        archived.setArchived(true);
+        ReflectionTestUtils.setField(archived, "id", VAULT_ID);
+        var colleague = user(UUID.randomUUID(), "colleague@example.com", Role.MEMBER);
+        when(userRepository.findByEmail("colleague@example.com")).thenReturn(Optional.of(colleague));
+        when(vaultRepository.findById(VAULT_ID)).thenReturn(Optional.of(archived));
+
+        assertThatThrownBy(() -> service.add(MANAGER, VAULT_ID, new AddVaultMemberRequest("colleague@example.com", AccessLevel.READ)))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.VAULT_ARCHIVED);
+        verify(accessControl, never()).grant(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("a member can still be removed from an archived vault")
+    void remove_fromArchivedVault_isAllowed() {
+        UUID memberId = UUID.randomUUID();
+
+        service.remove(MANAGER, VAULT_ID, memberId);
+
+        verify(accessControl).revoke(memberId, VAULT);
+    }
 }
