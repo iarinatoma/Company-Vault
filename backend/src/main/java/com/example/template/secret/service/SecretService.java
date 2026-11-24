@@ -230,8 +230,11 @@ public class SecretService {
         if (normalizedQuery == null) {
             return true;
         }
-        boolean nameMatch = secret.getName().toLowerCase(Locale.ROOT).contains(normalizedQuery);
-        if (nameMatch) {
+        if (secret.getName().toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
+            return true;
+        }
+        String description = secret.getDescription();
+        if (description != null && description.toLowerCase(Locale.ROOT).contains(normalizedQuery)) {
             return true;
         }
         return parseTags(secret.getTags()).stream().anyMatch(t -> t.contains(normalizedQuery));
