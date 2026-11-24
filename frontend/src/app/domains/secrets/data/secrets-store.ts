@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
-import { Folder, MoveSecretInput, Secret, SecretInput } from '@app/secrets/models/secret';
+import { Folder, MoveSecretInput, RevealedSecret, Secret, SecretInput } from '@app/secrets/models/secret';
 import { FoldersClient } from './folders-client';
 import { SecretsClient } from './secrets-client';
 
@@ -23,7 +23,7 @@ export class SecretsStore {
   private readonly _selectedFolder = signal<FolderSelection>('ALL');
   private readonly _searchQuery = signal('');
   private readonly _selectedTag = signal<string | null>(null);
-  private readonly _revealed = signal<ReadonlyMap<string, string>>(new Map());
+  private readonly _revealed = signal<ReadonlyMap<string, RevealedSecret>>(new Map());
   private readonly _status = signal<Status>('idle');
   private readonly _loadError = signal<string | null>(null);
   private readonly _saveError = signal<string | null>(null);
@@ -33,7 +33,7 @@ export class SecretsStore {
   readonly selectedFolder = this._selectedFolder.asReadonly();
   readonly searchQuery = this._searchQuery.asReadonly();
   readonly selectedTag = this._selectedTag.asReadonly();
-  /** Secret id → decrypted value, only for the secrets the user chose to show. */
+  /** Secret id → decrypted value and fields, only for the secrets the user chose to show. */
   readonly revealed = this._revealed.asReadonly();
   readonly loadError = this._loadError.asReadonly();
   readonly saveError = this._saveError.asReadonly();
@@ -118,8 +118,8 @@ export class SecretsStore {
     if (this.vaultId === null) return;
     this._saveError.set(null);
     try {
-      const value = await firstValueFrom(this.client.reveal(this.vaultId, secretId));
-      this._revealed.update((values) => new Map(values).set(secretId, value));
+      const revealed = await firstValueFrom(this.client.reveal(this.vaultId, secretId));
+      this._revealed.update((values) => new Map(values).set(secretId, revealed));
     } catch (error) {
       this._saveError.set(describe(error));
     }
