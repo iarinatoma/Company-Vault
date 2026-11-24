@@ -1,9 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
 import { Folder, MoveSecretInput, RevealedSecret, Secret, SecretInput } from '@app/secrets/models/secret';
 import { FoldersClient } from './folders-client';
 import { SecretsClient } from './secrets-client';
+
+/** How long a shown value stays visible before it is masked again. */
+export const REVEAL_TIMEOUT_MS = new InjectionToken<number>('REVEAL_TIMEOUT_MS', {
+  providedIn: 'root',
+  factory: () => 60 * 1000,
+});
 
 type Status = 'idle' | 'loading' | 'saving';
 export type FolderSelection = 'ALL' | 'ROOT' | string;
@@ -11,12 +17,16 @@ export type FolderSelection = 'ALL' | 'ROOT' | string;
 /**
  * State of one vault's folders and secrets. Provided by the panel component (not root),
  * so revealed values live only as long as that page and are never shared with another vault.
+ * A shown value is masked again after `REVEAL_TIMEOUT_MS`.
  */
 @Injectable()
 export class SecretsStore {
   private readonly client = inject(SecretsClient);
   private readonly foldersClient = inject(FoldersClient);
+  private readonly revealTimeoutMs = inject(REVEAL_TIMEOUT_MS);
   private vaultId: string | null = null;
+  /** Secret id → timer that masks the shown value again. */
+  private readonly hideTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   private readonly _items = signal<readonly Secret[]>([]);
   private readonly _folders = signal<readonly Folder[]>([]);
@@ -73,9 +83,14 @@ export class SecretsStore {
 
   readonly rootSecretCount = computed(() => this._items().filter((s) => s.folderId === null).length);
 
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopHideTimers());
+  }
+
   async load(vaultId: string): Promise<void> {
     this.vaultId = vaultId;
     this._items.set([]);
+    this.stopHideTimers();
     this._revealed.set(new Map());
     this._selectedFolder.set('ALL');
     this._searchQuery.set('');
@@ -120,12 +135,33 @@ export class SecretsStore {
     try {
       const revealed = await firstValueFrom(this.client.reveal(this.vaultId, secretId));
       this._revealed.update((values) => new Map(values).set(secretId, revealed));
+      this.startHideTimer(secretId);
     } catch (error) {
       this._saveError.set(describe(error));
     }
   }
 
+  /**
+   * Decrypts one secret for "Copy" without showing it: the value goes to the clipboard only and
+   * stays masked in the list. Null (with an error message) if the server refuses.
+   */
+  async fetchForCopy(secretId: string): Promise<RevealedSecret | null> {
+    if (this.vaultId === null) return null;
+    this._saveError.set(null);
+    try {
+      return await firstValueFrom(this.client.reveal(this.vaultId, secretId));
+    } catch (error) {
+      this._saveError.set(describe(error));
+      return null;
+    }
+  }
+
   hide(secretId: string): void {
+    const timer = this.hideTimers.get(secretId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.hideTimers.delete(secretId);
+    }
     this._revealed.update((values) => {
       const next = new Map(values);
       next.delete(secretId);
@@ -170,6 +206,17 @@ export class SecretsStore {
 
   clearSaveError(): void {
     this._saveError.set(null);
+  }
+
+  private startHideTimer(secretId: string): void {
+    const previous = this.hideTimers.get(secretId);
+    if (previous !== undefined) clearTimeout(previous);
+    this.hideTimers.set(secretId, setTimeout(() => this.hide(secretId), this.revealTimeoutMs));
+  }
+
+  private stopHideTimers(): void {
+    for (const timer of this.hideTimers.values()) clearTimeout(timer);
+    this.hideTimers.clear();
   }
 
   private async write(action: (vaultId: string) => Observable<unknown>): Promise<boolean> {

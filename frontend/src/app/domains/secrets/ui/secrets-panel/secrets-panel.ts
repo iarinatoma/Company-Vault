@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { ConfirmDialog } from '@app/home/ui/confirm-dialog/confirm-dialog';
 import { AccessLevel, hasAccess } from '@app/shared/auth/models/access';
+import { SecureClipboard } from '@app/secrets/data/secure-clipboard';
 import { FolderSelection, SecretsStore } from '@app/secrets/data/secrets-store';
 import {
   Folder,
@@ -19,7 +20,8 @@ import { secretTypeLabel, toSecretType } from '@app/secrets/util/secret-fields';
 /**
  * The secrets and folders of one vault, shown on the vault page. Buttons follow the caller's level
  * on the vault (READ → show/search, WRITE → create/edit/folders/move, MANAGE → delete/cross-vault move)
- * and an archived vault is read-only. Values and type-specific fields stay masked until "Show".
+ * and an archived vault is read-only. Values and type-specific fields stay masked until "Show";
+ * "Copy" decrypts on click and puts the value in the clipboard, which is emptied again shortly after.
  */
 @Component({
   selector: 'app-secrets-panel',
@@ -34,6 +36,7 @@ export class SecretsPanel implements OnInit {
   readonly archived = input(false);
 
   protected readonly store = inject(SecretsStore);
+  protected readonly clipboard = inject(SecureClipboard);
 
   protected readonly canWrite = computed(() => hasAccess(this.accessLevel(), 'WRITE') && !this.archived());
   protected readonly canManage = computed(() => hasAccess(this.accessLevel(), 'MANAGE') && !this.archived());
@@ -95,6 +98,12 @@ export class SecretsPanel implements OnInit {
   protected toggle(secret: Secret): void {
     if (this.store.revealed().has(secret.id)) this.store.hide(secret.id);
     else void this.store.reveal(secret.id);
+  }
+
+  /** Copies the main value; a masked secret is decrypted for this click only and stays masked. */
+  protected async copy(secret: Secret): Promise<void> {
+    const revealed = this.store.revealed().get(secret.id) ?? (await this.store.fetchForCopy(secret.id));
+    if (revealed) await this.clipboard.copy(revealed.value);
   }
 
   protected openCreate(): void {
