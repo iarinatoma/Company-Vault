@@ -118,4 +118,40 @@ class VaultControllerIT extends AbstractIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(bodyOf(response).get("code").asString()).isEqualTo("FORBIDDEN");
     }
+
+    @Test
+    @DisplayName("a manager deletes a vault together with its folders and secrets")
+    void delete_asManagerWithFoldersAndSecrets_returns204() {
+        String owner = tokenFor(TestUsers.VAULTS_MEMBER_EMAIL);
+        var created = vaultApi.create(
+                tokenFor(TestUsers.VAULTS_ADMIN_EMAIL), "To delete", null, TestUsers.VAULTS_MEMBER_ID.toString());
+        String id = bodyOf(created).get("id").asString();
+        assertThat(vaultApi.createFolder(owner, id, "Servers").getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(vaultApi.createSecret(owner, id, "Root password", "s3cr3t").getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+
+        var response = vaultApi.delete(owner, id);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(vaultApi.get(tokenFor(TestUsers.VAULTS_ADMIN_EMAIL), id).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("WRITE is not enough to delete a vault")
+    void delete_withOnlyWrite_returns403() {
+        var response = vaultApi.delete(
+                tokenFor(TestUsers.VAULTS_MEMBER_EMAIL), TestUsers.VAULTS_SHARED_ID.toString());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("WRITE is not enough to archive a vault")
+    void archive_withOnlyWrite_returns403() {
+        var response = vaultApi.archive(
+                tokenFor(TestUsers.VAULTS_MEMBER_EMAIL), TestUsers.VAULTS_SHARED_ID.toString());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
 }

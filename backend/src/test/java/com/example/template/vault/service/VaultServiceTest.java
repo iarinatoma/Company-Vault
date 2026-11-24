@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.inOrder;
 
 import com.example.template.access.service.AccessControl;
 import com.example.template.keys.service.EnvelopeEncryption;
@@ -37,6 +38,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.example.template.vault.dto.CreateProjectVaultRequest;
+import com.example.template.access.repository.AccessGrantRepository;
+import com.example.template.folder.repository.FolderRepository;
+import com.example.template.secret.repository.SecretRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VaultService")
@@ -59,6 +63,15 @@ class VaultServiceTest {
 
     @Mock
     private EnvelopeEncryption envelopeEncryption;
+
+    @Mock
+    private SecretRepository secretRepository;
+
+    @Mock
+    private FolderRepository folderRepository;
+
+    @Mock
+    private AccessGrantRepository accessGrantRepository;
 
     @InjectMocks
     private VaultService vaultService;
@@ -229,4 +242,96 @@ class VaultServiceTest {
                 .isEqualTo(ErrorCode.VALIDATION_FAILED);
         verify(vaultRepository, never()).save(any());
     }    
+
+    @Test
+    @DisplayName("a manager archives a vault; its data key is kept")
+    void archive_asManager_marksVaultArchived() {
+        var vault = storedVault("Shared Accounts");
+        var resource = new ResourceRef(ResourceType.VAULT, vault.requireId());
+        when(vaultRepository.findById(vault.requireId())).thenReturn(Optional.of(vault));
+        when(vaultRepository.save(vault)).thenReturn(vault);
+        when(accessControl.levelOf(MEMBER, resource)).thenReturn(AccessLevel.MANAGE);
+
+        var response = vaultService.archive(MEMBER, vault.requireId());
+
+        assertThat(response.archived()).isTrue();
+        verify(accessControl).require(MEMBER, resource, AccessLevel.MANAGE);
+        verify(envelopeEncryption, never()).deleteKey(any());
+    }
+
+    @Test
+    @DisplayName("archiving needs MANAGE — WRITE is not enough")
+    void archive_withoutManage_isForbidden() {
+        UUID id = UUID.randomUUID();
+        doThrow(new ApiException(ErrorCode.FORBIDDEN))
+                .when(accessControl)
+                .require(MEMBER, new ResourceRef(ResourceType.VAULT, id), AccessLevel.MANAGE);
+
+        assertThatThrownBy(() -> vaultService.archive(MEMBER, id))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+        verify(vaultRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a personal vault cannot be archived")
+    void archive_personalVault_isRejected() {
+        var vault = storedVault("Personal vault");
+        vault.setType(VaultType.PERSONAL);
+        when(vaultRepository.findById(vault.requireId())).thenReturn(Optional.of(vault));
+
+        assertThatThrownBy(() -> vaultService.archive(MEMBER, vault.requireId()))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.VALIDATION_FAILED);
+        verify(vaultRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("deleting removes the data key, secrets, folders and grants before the vault itself")
+    void delete_asManager_removesEverythingInOrder() {
+        var vault = storedVault("Shared Accounts");
+        UUID id = vault.requireId();
+        var resource = new ResourceRef(ResourceType.VAULT, id);
+        when(vaultRepository.findById(id)).thenReturn(Optional.of(vault));
+
+        vaultService.delete(MEMBER, id);
+
+        var order = inOrder(accessControl, envelopeEncryption, secretRepository, folderRepository,
+                accessGrantRepository, vaultRepository);
+        order.verify(accessControl).require(MEMBER, resource, AccessLevel.MANAGE);
+        order.verify(envelopeEncryption).deleteKey(resource);
+        order.verify(secretRepository).deleteAllByVaultId(id);
+        order.verify(folderRepository).deleteAllByVaultId(id);
+        order.verify(accessGrantRepository).deleteAllByResource(ResourceType.VAULT, id);
+        order.verify(vaultRepository).deleteById(id);
+    }
+
+    @Test
+    @DisplayName("deleting needs MANAGE; nothing is removed without it")
+    void delete_withoutManage_isForbidden() {
+        UUID id = UUID.randomUUID();
+        doThrow(new ApiException(ErrorCode.FORBIDDEN))
+                .when(accessControl)
+                .require(MEMBER, new ResourceRef(ResourceType.VAULT, id), AccessLevel.MANAGE);
+
+        assertThatThrownBy(() -> vaultService.delete(MEMBER, id))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+        verify(envelopeEncryption, never()).deleteKey(any());
+        verify(vaultRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("a personal vault cannot be deleted and its data key is kept")
+    void delete_personalVault_isRejected() {
+        var vault = storedVault("Personal vault");
+        vault.setType(VaultType.PERSONAL);
+        when(vaultRepository.findById(vault.requireId())).thenReturn(Optional.of(vault));
+
+        assertThatThrownBy(() -> vaultService.delete(MEMBER, vault.requireId()))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.VALIDATION_FAILED);
+        verify(envelopeEncryption, never()).deleteKey(any());
+        verify(vaultRepository, never()).deleteById(any());
+    }
 }
