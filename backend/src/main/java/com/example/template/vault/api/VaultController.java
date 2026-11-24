@@ -13,12 +13,15 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import com.example.template.vault.dto.CreateProjectVaultRequest;
+import com.example.template.vault.dto.UpdateVaultRequest;
 
 @RestController
 @RequestMapping("/api/v{version}/vaults")
@@ -73,6 +76,31 @@ public class VaultController {
     public VaultResponse createProject(
             @AuthenticationPrincipal AuthPrincipal principal, @Valid @RequestBody CreateProjectVaultRequest request) {
         return vaultService.createProject(principal, request);
+    }
+
+    @Operation(summary = "Rename or update vault metadata", description = "Needs WRITE; an archived vault is read-only.")
+    @PutMapping(path = "/{id}", version = "1")
+    @PreAuthorize("isAuthenticated()")
+    public VaultResponse update(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateVaultRequest request) {
+        return vaultService.update(principal, id, request);
+    }
+
+    @Operation(summary = "Archive a vault", description = "Needs WRITE. The data key is retained.")
+    @PutMapping(path = "/{id}/archive", version = "1")
+    @PreAuthorize("isAuthenticated()")
+    public VaultResponse archive(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
+        return vaultService.archive(principal, id);
+    }
+
+    @Operation(summary = "Delete a vault", description = "Needs MANAGE. Deletes the vault data key and all vault secrets.")
+    @DeleteMapping(path = "/{id}", version = "1")
+    @PreAuthorize("isAuthenticated()")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
+        vaultService.delete(principal, id);
     }
 
 }

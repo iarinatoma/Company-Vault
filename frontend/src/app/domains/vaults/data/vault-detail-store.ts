@@ -62,6 +62,18 @@ export class VaultDetailStore {
     return this.write((id) => this.client.removeMember(id, userId));
   }
 
+  update(name: string, description: string | null): Promise<boolean> {
+    return this.writeVault((id) => this.client.update(id, name, description));
+  }
+
+  archive(): Promise<boolean> {
+    return this.writeVault((id) => this.client.archive(id));
+  }
+
+  delete(): Promise<boolean> {
+    return this.writeVault((id) => this.client.delete(id));
+  }
+
   clearSaveError(): void {
     this._saveError.set(null);
   }
@@ -74,6 +86,27 @@ export class VaultDetailStore {
     try {
       await firstValueFrom(action(vault.id));
       this._members.set(await firstValueFrom(this.client.members(vault.id)));
+      return true;
+    } catch (error) {
+      this._saveError.set(describe(error));
+      return false;
+    } finally {
+      this._status.set('idle');
+    }
+  }
+
+  private async writeVault(action: (vaultId: string) => Observable<unknown>): Promise<boolean> {
+    const vault = this._vault();
+    if (vault === null) return false;
+    this._status.set('saving');
+    this._saveError.set(null);
+    try {
+      const updated = await firstValueFrom(action(vault.id));
+      if (updated && typeof updated === 'object' && 'id' in updated) {
+        this._vault.set(updated as Vault);
+      } else {
+        this._vault.set(null);
+      }
       return true;
     } catch (error) {
       this._saveError.set(describe(error));

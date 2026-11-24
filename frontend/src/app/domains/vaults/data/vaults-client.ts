@@ -51,4 +51,16 @@ export class VaultsClient {
       `${this.url}/${encodeURIComponent(vaultId)}/members/${encodeURIComponent(userId)}`,
     );
   }
+
+  update(id: string, name: string, description: string | null): Observable<Vault> {
+    return this.http.put<Vault>(`${this.url}/${encodeURIComponent(id)}`, { name, description });
+  }
+
+  archive(id: string): Observable<Vault> {
+    return this.http.put<Vault>(`${this.url}/${encodeURIComponent(id)}/archive`, {});
+  }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${encodeURIComponent(id)}`);
+  }
 }

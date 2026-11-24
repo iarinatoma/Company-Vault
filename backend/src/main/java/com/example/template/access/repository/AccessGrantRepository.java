@@ -25,4 +25,9 @@ public interface AccessGrantRepository extends JpaRepository<AccessGrant, UUID> 
     @Modifying
     @Query("delete from AccessGrant g where g.userId = :userId")
     int deleteAllByUserId(UUID userId);
+
+    /** Removes all grants attached to a vault that is being deleted. */
+    @Modifying
+    @Query("delete from AccessGrant g where g.resourceType = :resourceType and g.resourceId = :resourceId")
+    int deleteAllByResource(ResourceType resourceType, UUID resourceId);
 }

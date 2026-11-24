@@ -1,6 +1,7 @@
 package com.example.template.vault.service;
 
 import com.example.template.access.service.AccessControl;
+import com.example.template.access.repository.AccessGrantRepository;
 import com.example.template.keys.service.EnvelopeEncryption;
 import com.example.template.shared.error.ApiException;
 import com.example.template.shared.error.ErrorCode;
@@ -15,6 +16,8 @@ import com.example.template.vault.dto.VaultResponse;
 import com.example.template.vault.model.Vault;
 import com.example.template.vault.model.VaultType;
 import com.example.template.vault.repository.VaultRepository;
+import com.example.template.secret.repository.SecretRepository;
+import com.example.template.vault.dto.UpdateVaultRequest;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -39,16 +42,22 @@ public class VaultService {
     private final UserRepository userRepository;
     private final AccessControl accessControl;
     private final EnvelopeEncryption envelopeEncryption;
+    private final SecretRepository secretRepository;
+    private final AccessGrantRepository accessGrantRepository;
 
     public VaultService(
             VaultRepository vaultRepository,
             UserRepository userRepository,
             AccessControl accessControl,
-            EnvelopeEncryption envelopeEncryption) {
+            EnvelopeEncryption envelopeEncryption,
+            SecretRepository secretRepository,
+            AccessGrantRepository accessGrantRepository) {
         this.vaultRepository = vaultRepository;
         this.userRepository = userRepository;
         this.accessControl = accessControl;
         this.envelopeEncryption = envelopeEncryption;
+        this.secretRepository = secretRepository;
+        this.accessGrantRepository = accessGrantRepository;
     }
 
     /**
@@ -129,6 +138,48 @@ public class VaultService {
         }
         var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
         return toResponse(vault, accessControl.levelOf(principal, resource));
+    }
+
+    /** Renames a vault and updates its description. Needs WRITE and the vault must not be archived. */
+    @Transactional
+    public VaultResponse update(AuthPrincipal principal, UUID id, UpdateVaultRequest request) {
+        var resource = new ResourceRef(ResourceType.VAULT, id);
+        accessControl.require(principal, resource, AccessLevel.WRITE);
+        var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        if (vault.isArchived()) {
+            throw new ApiException(ErrorCode.VAULT_ARCHIVED);
+        }
+        vault.setName(request.name().strip());
+        vault.setDescription(blankToNull(request.description()));
+        vault = vaultRepository.save(vault);
+        return toResponse(vault, accessControl.levelOf(principal, resource));
+    }
+
+    /** Archives a vault. Needs WRITE; archive is metadata-only and leaves the DEK intact. */
+    @Transactional
+    public VaultResponse archive(AuthPrincipal principal, UUID id) {
+        var resource = new ResourceRef(ResourceType.VAULT, id);
+        accessControl.require(principal, resource, AccessLevel.WRITE);
+        var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        vault.setArchived(true);
+        vault = vaultRepository.save(vault);
+        return toResponse(vault, accessControl.levelOf(principal, resource));
+    }
+
+    /**
+     * Permanently deletes a vault. Needs MANAGE, deletes its DEK first, then ciphertext metadata
+     * and access grants. No rename or archive operation calls deleteKey.
+     */
+    @Transactional
+    public void delete(AuthPrincipal principal, UUID id) {
+        var resource = new ResourceRef(ResourceType.VAULT, id);
+        accessControl.require(principal, resource, AccessLevel.MANAGE);
+        vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        envelopeEncryption.deleteKey(resource);
+        secretRepository.deleteAllByVaultId(id);
+        accessGrantRepository.deleteAllByResource(ResourceType.VAULT, id);
+        vaultRepository.deleteById(id);
+        log.info("Vault {} permanently deleted by {}", id, principal.userId());
     }
 
     private static ResourceRef refOf(Vault vault) {
