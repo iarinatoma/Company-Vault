@@ -1,7 +1,6 @@
 package com.example.template.secret.api;
 
 import com.example.template.secret.dto.CreateSecretRequest;
-import com.example.template.secret.dto.MoveSecretRequest;
 import com.example.template.secret.dto.SecretResponse;
 import com.example.template.secret.dto.SecretValueResponse;
 import com.example.template.secret.dto.UpdateSecretRequest;
@@ -46,10 +45,8 @@ public class SecretController {
             @AuthenticationPrincipal AuthPrincipal principal,
             @PathVariable UUID vaultId,
             @RequestParam(required = false) @Nullable String q,
-            @RequestParam(required = false) @Nullable String tag,
-            @RequestParam(required = false) @Nullable UUID folderId,
-            @RequestParam(defaultValue = "false") boolean rootOnly) {
-        return secretService.list(principal, vaultId, q, tag, folderId, rootOnly);
+            @RequestParam(required = false) @Nullable String tag) {
+        return secretService.list(principal, vaultId, q, tag);
     }
 
     @Operation(
@@ -88,20 +85,6 @@ public class SecretController {
             @PathVariable UUID secretId,
             @Valid @RequestBody UpdateSecretRequest request) {
         return secretService.update(principal, vaultId, secretId, request);
-    }
-
-    @Operation(
-            summary = "Move a secret to another folder or vault",
-            description = "Same-vault moves update folderId without re-encryption; cross-vault moves require MANAGE "
-                    + "on the source vault and WRITE on the target vault and re-encrypt with the target vault's DEK.")
-    @PostMapping(path = "/{secretId}/move", version = "1")
-    @PreAuthorize("isAuthenticated()")
-    public SecretResponse move(
-            @AuthenticationPrincipal AuthPrincipal principal,
-            @PathVariable UUID vaultId,
-            @PathVariable UUID secretId,
-            @Valid @RequestBody MoveSecretRequest request) {
-        return secretService.move(principal, vaultId, secretId, request);
     }
 
     @Operation(summary = "Delete a secret", description = "Needs MANAGE on the vault, which must not be archived.")
