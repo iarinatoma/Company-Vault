@@ -122,6 +122,16 @@ wrapped with the master key. The caller saves the returned ciphertexts in the sa
 a failure keeps the old DEK. Rotate a vault's DEK when someone with access to it leaves or a
 compromise is suspected. There is no endpoint yet: the secrets feature calls it, because only it
 knows the vault's ciphertexts.
+
+### Password generator
+
+`GET /api/v1/password-generator?length=20&lowercase=true&uppercase=true&digits=true&symbols=true`
+(any signed-in user; all parameters optional, defaults shown) returns a random password from
+`SecureRandom`, its entropy in bits (length × log2 of the character pool) and a strength label:
+`WEAK` (< 40 bits), `FAIR` (< 60), `STRONG` (< 80), `VERY_STRONG`. The length must be 8–128 and
+at least one character set must be on; every chosen set appears at least once. The password is
+only in the response body: it is never stored or logged.
+
 ## Commands
 
 ```bash
