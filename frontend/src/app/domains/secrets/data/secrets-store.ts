@@ -51,7 +51,7 @@ export class SecretsStore {
     return [...tags].sort((a, b) => a.localeCompare(b));
   });
 
-  /** Client-side filtered view for instant feedback alongside backend metadata search. */
+  /** Client-side filtered view over plain-text metadata only (name, description, tags) — never secret values. */
   readonly filteredItems = computed(() => {
     const folder = this._selectedFolder();
     const query = this._searchQuery().trim().toLowerCase();
@@ -63,8 +63,9 @@ export class SecretsStore {
       if (tag && !(secret.tags ?? []).includes(tag)) return false;
       if (query !== '') {
         const inName = secret.name.toLowerCase().includes(query);
+        const inDescription = (secret.description ?? '').toLowerCase().includes(query);
         const inTags = (secret.tags ?? []).some((t) => t.toLowerCase().includes(query));
-        if (!inName && !inTags) return false;
+        if (!inName && !inDescription && !inTags) return false;
       }
       return true;
     });
