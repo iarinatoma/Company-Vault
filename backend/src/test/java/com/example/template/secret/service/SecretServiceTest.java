@@ -321,4 +321,69 @@ class SecretServiceTest {
                 .isEqualTo(ErrorCode.FORBIDDEN);
         verify(secretRepository, never()).delete(any());
     }
+
+    @Test
+    @DisplayName("searching q matches plaintext name, description, and tags case-insensitively")
+    void list_queryMatchesNameDescriptionAndTagsCaseInsensitively() {
+        var s1 = storedSecret("AWS Root Key", "ENC_1");
+        s1.setDescription("Primary IAM credential for billing");
+        s1.setTags("aws,prod");
+
+        var s2 = storedSecret("GitHub Deploy Token", "ENC_2");
+        s2.setDescription("Used by CI runners");
+        s2.setTags("ci,github");
+
+        when(secretRepository.findAllByVaultIdOrderByNameAsc(VAULT_ID)).thenReturn(List.of(s1, s2));
+
+        // Matches name (case-insensitive)
+        assertThat(service.list(USER, VAULT_ID, "aws root", null, null, false))
+                .singleElement()
+                .satisfies(s -> assertThat(s.name()).isEqualTo("AWS Root Key"));
+
+        // Matches description (case-insensitive)
+        assertThat(service.list(USER, VAULT_ID, "BILLING", null, null, false))
+                .singleElement()
+                .satisfies(s -> assertThat(s.name()).isEqualTo("AWS Root Key"));
+
+        // Matches tag substring (case-insensitive)
+        assertThat(service.list(USER, VAULT_ID, "RUNNERS", null, null, false))
+                .singleElement()
+                .satisfies(s -> assertThat(s.name()).isEqualTo("GitHub Deploy Token"));
+
+        verify(envelopeEncryption, never()).decrypt(any(), any());
+    }
+
+    @Test
+    @DisplayName("filtering by tag matches exact normalized tags only")
+    void list_tagFilterMatchesExactNormalizedTag() {
+        var s1 = storedSecret("Prod DB", "ENC_1");
+        s1.setTags("prod,postgres");
+
+        var s2 = storedSecret("Staging DB", "ENC_2");
+        s2.setTags("production-like,postgres");
+
+        when(secretRepository.findAllByVaultIdOrderByNameAsc(VAULT_ID)).thenReturn(List.of(s1, s2));
+
+        var result = service.list(USER, VAULT_ID, null, "  PROD  ", null, false);
+
+        assertThat(result).singleElement().satisfies(s -> assertThat(s.name()).isEqualTo("Prod DB"));
+        verify(envelopeEncryption, never()).decrypt(any(), any());
+    }
+
+    @Test
+    @DisplayName("searching for text present only in encrypted value returns empty list without decrypting")
+    void list_queryMatchingOnlyEncryptedValue_returnsEmptyAndNeverDecrypts() {
+        var secret = storedSecret("Vault Secret", "CIPHERTEXT_SUPER_SECRET_PASSWORD_123");
+        secret.setDescription("Internal service token");
+        secret.setTags("internal");
+
+        when(secretRepository.findAllByVaultIdOrderByNameAsc(VAULT_ID)).thenReturn(List.of(secret));
+
+        var result = service.list(USER, VAULT_ID, "SUPER_SECRET_PASSWORD", null, null, false);
+
+        assertThat(result).isEmpty();
+        verify(envelopeEncryption, never()).decrypt(any(), any());
+    }
+
+
 }
