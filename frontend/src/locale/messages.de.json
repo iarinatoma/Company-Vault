@@ -203,6 +203,19 @@
     "secretForm.valueKeep": "Leer lassen, um den aktuellen Wert zu behalten.",
     "secretForm.valueEncrypted": "Wird verschlüsselt gespeichert; nur Personen mit Zugriff auf diesen Tresor können ihn anzeigen.",
     "secretForm.cancel": "Abbrechen",
-    "secretForm.save": "Speichern"
+    "secretForm.save": "Speichern",
+    "vaultDetail.rename": "Umbenennen",
+    "vaultDetail.archive": "Archivieren",
+    "vaultDetail.delete": "Löschen",
+    "vaultDetail.renameTitle": "Tresor umbenennen?",
+    "vaultDetail.renameName": "Name",
+    "vaultDetail.renameDescription": "Beschreibung",
+    "vaultDetail.confirmRename": "Speichern",
+    "vaultDetail.archiveTitle": "Tresor archivieren?",
+    "vaultDetail.confirmArchive": "Archivieren",
+    "vaultDetail.archiveBody": "Der Tresor wird schreibgeschützt. Vorhandene Secrets bleiben lesbar und der Datenschlüssel bleibt erhalten.",
+    "vaultDetail.deleteTitle": "Tresor löschen?",
+    "vaultDetail.confirmDelete": "Löschen",
+    "vaultDetail.deleteBody": "Dadurch werden der Tresor, seine Secrets und sein Verschlüsselungsschlüssel endgültig gelöscht."
   }
 }

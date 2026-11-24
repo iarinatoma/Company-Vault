@@ -32,6 +32,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.example.template.vault.model.Vault;
+import com.example.template.vault.model.VaultType;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("VaultMemberService")
@@ -184,5 +186,70 @@ class VaultMemberServiceTest {
 
         verify(accessControl).grant(newOwner.requireId(), VAULT, AccessLevel.MANAGE);
         verify(accessControl, never()).require(any(), any(), any());
+    }
+
+    private static Vault personalVault() {
+        var vault = new Vault();
+        vault.setName("Personal vault");
+        vault.setType(VaultType.PERSONAL);
+        ReflectionTestUtils.setField(vault, "id", VAULT_ID);
+        return vault;
+    }
+
+    @Test
+    @DisplayName("the owner cannot share their personal vault")
+    void add_toPersonalVault_isRejected() {
+        var colleague = user(UUID.randomUUID(), "colleague@example.com", Role.MEMBER);
+        when(userRepository.findByEmail("colleague@example.com")).thenReturn(Optional.of(colleague));
+        when(vaultRepository.findById(VAULT_ID)).thenReturn(Optional.of(personalVault()));
+
+        assertThatThrownBy(() -> service.add(MANAGER, VAULT_ID, new AddVaultMemberRequest("colleague@example.com", AccessLevel.READ)))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.VALIDATION_FAILED);
+        verify(accessControl, never()).grant(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("an administrator cannot add themselves to someone's personal vault")
+    void admin_addSelfToPersonalVault_isRejected() {
+        var admin = user(ADMIN.userId(), ADMIN.email(), Role.ADMINISTRATOR);
+        when(vaultRepository.existsById(VAULT_ID)).thenReturn(true);
+        when(accessControl.levelOf(ADMIN, VAULT)).thenReturn(AccessLevel.NO_ACCESS);
+        when(userRepository.findByEmail(ADMIN.email())).thenReturn(Optional.of(admin));
+        when(vaultRepository.findById(VAULT_ID)).thenReturn(Optional.of(personalVault()));
+
+        assertThatThrownBy(() -> service.add(ADMIN, VAULT_ID, new AddVaultMemberRequest(ADMIN.email(), AccessLevel.READ)))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.VALIDATION_FAILED);
+        verify(accessControl, never()).grant(any(), any(), any());
+    }
+
+
+    @Test
+    @DisplayName("nobody can be added to an archived vault")
+    void add_toArchivedVault_isRejected() {
+        var archived = new Vault();
+        archived.setName("Old project");
+        archived.setType(VaultType.PROJECT);
+        archived.setArchived(true);
+        ReflectionTestUtils.setField(archived, "id", VAULT_ID);
+        var colleague = user(UUID.randomUUID(), "colleague@example.com", Role.MEMBER);
+        when(userRepository.findByEmail("colleague@example.com")).thenReturn(Optional.of(colleague));
+        when(vaultRepository.findById(VAULT_ID)).thenReturn(Optional.of(archived));
+
+        assertThatThrownBy(() -> service.add(MANAGER, VAULT_ID, new AddVaultMemberRequest("colleague@example.com", AccessLevel.READ)))
+                .extracting(exception -> ((ApiException) exception).errorCode())
+                .isEqualTo(ErrorCode.VAULT_ARCHIVED);
+        verify(accessControl, never()).grant(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("a member can still be removed from an archived vault")
+    void remove_fromArchivedVault_isAllowed() {
+        UUID memberId = UUID.randomUUID();
+
+        service.remove(MANAGER, VAULT_ID, memberId);
+
+        verify(accessControl).revoke(memberId, VAULT);
     }
 }

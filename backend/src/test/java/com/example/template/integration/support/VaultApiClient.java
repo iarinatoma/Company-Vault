@@ -63,6 +63,28 @@ public class VaultApiClient {
         return exchange(HttpMethod.DELETE, "/api/v1/vaults/" + vaultId + "/members/" + userId, accessToken, null);
     }
 
+    public ResponseEntity<JsonNode> archive(@Nullable String accessToken, String id) {
+        return exchange(HttpMethod.PUT, "/api/v1/vaults/" + id + "/archive", accessToken, null);
+    }
+
+    public ResponseEntity<JsonNode> delete(@Nullable String accessToken, String id) {
+        return exchange(HttpMethod.DELETE, "/api/v1/vaults/" + id, accessToken, null);
+    }
+
+    public ResponseEntity<JsonNode> createFolder(@Nullable String accessToken, String vaultId, String name) {
+        var body = new HashMap<String, @Nullable Object>();
+        body.put("name", name);
+        return exchange(HttpMethod.POST, "/api/v1/vaults/" + vaultId + "/folders", accessToken, body);
+    }
+
+    public ResponseEntity<JsonNode> createSecret(
+            @Nullable String accessToken, String vaultId, String name, String value) {
+        var body = new HashMap<String, @Nullable Object>();
+        body.put("name", name);
+        body.put("value", value);
+        return exchange(HttpMethod.POST, "/api/v1/vaults/" + vaultId + "/secrets", accessToken, body);
+    }
+
     private ResponseEntity<JsonNode> exchange(
             HttpMethod method, String path, @Nullable String accessToken, @Nullable Map<String, @Nullable Object> body) {
         var headers = new HttpHeaders();

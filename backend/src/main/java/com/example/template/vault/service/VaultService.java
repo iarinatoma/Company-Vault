@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.template.vault.dto.CreateProjectVaultRequest;
+import com.example.template.folder.repository.FolderRepository;
 
 /**
  * Vaults: creation, the list a user may see, and the metadata of one vault. Who may use a vault is
@@ -43,6 +44,7 @@ public class VaultService {
     private final AccessControl accessControl;
     private final EnvelopeEncryption envelopeEncryption;
     private final SecretRepository secretRepository;
+    private final FolderRepository folderRepository;
     private final AccessGrantRepository accessGrantRepository;
 
     public VaultService(
@@ -51,12 +53,14 @@ public class VaultService {
             AccessControl accessControl,
             EnvelopeEncryption envelopeEncryption,
             SecretRepository secretRepository,
+            FolderRepository folderRepository,
             AccessGrantRepository accessGrantRepository) {
         this.vaultRepository = vaultRepository;
         this.userRepository = userRepository;
         this.accessControl = accessControl;
         this.envelopeEncryption = envelopeEncryption;
         this.secretRepository = secretRepository;
+        this.folderRepository = folderRepository;
         this.accessGrantRepository = accessGrantRepository;
     }
 
@@ -112,12 +116,18 @@ public class VaultService {
         return toResponse(vault, accessControl.levelOf(creator, resource));
     }
 
-    /** Admins: every active vault (metadata only). Everyone else: the active vaults they can read. */
+    /**
+     * Admins: every active general and project vault (metadata only) — other users' personal vaults
+     * stay private (spec 4.2). Everyone else: the active vaults they can read.
+     */
     @Transactional(readOnly = true)
     public List<VaultResponse> list(AuthPrincipal principal) {
         List<Vault> vaults;
         if (principal.role() == Role.ADMINISTRATOR) {
-            vaults = vaultRepository.findAllByArchivedFalseOrderByNameAsc();
+            vaults = vaultRepository.findAllByArchivedFalseOrderByNameAsc().stream()
+                    .filter(vault -> vault.getType() != VaultType.PERSONAL
+                            || accessControl.levelOf(principal, refOf(vault)).includes(AccessLevel.READ))
+                    .toList();
         } else {
             var readable = accessControl.resourceIdsOf(principal, ResourceType.VAULT, AccessLevel.READ);
             vaults = readable.isEmpty()
@@ -129,7 +139,10 @@ public class VaultService {
                 .toList();
     }
 
-    /** One vault's metadata. Admins may always see it; everyone else needs at least READ. */
+    /**
+     * One vault's metadata. Admins may see any general or project vault; a personal vault — like
+     * every vault for everyone else — needs at least READ.
+     */
     @Transactional(readOnly = true)
     public VaultResponse get(AuthPrincipal principal, UUID id) {
         var resource = new ResourceRef(ResourceType.VAULT, id);
@@ -137,14 +150,17 @@ public class VaultService {
             accessControl.require(principal, resource, AccessLevel.READ);
         }
         var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        if (principal.role() == Role.ADMINISTRATOR && vault.getType() == VaultType.PERSONAL) {
+            accessControl.require(principal, resource, AccessLevel.READ);
+        }
         return toResponse(vault, accessControl.levelOf(principal, resource));
     }
 
-    /** Renames a vault and updates its description. Needs WRITE and the vault must not be archived. */
+    /** Renames a vault and updates its description. Needs MANAGE and the vault must not be archived. */
     @Transactional
     public VaultResponse update(AuthPrincipal principal, UUID id, UpdateVaultRequest request) {
         var resource = new ResourceRef(ResourceType.VAULT, id);
-        accessControl.require(principal, resource, AccessLevel.WRITE);
+        accessControl.require(principal, resource, AccessLevel.MANAGE);
         var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
         if (vault.isArchived()) {
             throw new ApiException(ErrorCode.VAULT_ARCHIVED);
@@ -155,31 +171,41 @@ public class VaultService {
         return toResponse(vault, accessControl.levelOf(principal, resource));
     }
 
-    /** Archives a vault. Needs WRITE; archive is metadata-only and leaves the DEK intact. */
+    /** Archives a vault. Needs MANAGE because it makes the vault read-only for everyone; the DEK is kept. */
     @Transactional
     public VaultResponse archive(AuthPrincipal principal, UUID id) {
         var resource = new ResourceRef(ResourceType.VAULT, id);
-        accessControl.require(principal, resource, AccessLevel.WRITE);
+        accessControl.require(principal, resource, AccessLevel.MANAGE);
         var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        requireNotPersonal(vault);
         vault.setArchived(true);
         vault = vaultRepository.save(vault);
         return toResponse(vault, accessControl.levelOf(principal, resource));
     }
 
     /**
-     * Permanently deletes a vault. Needs MANAGE, deletes its DEK first, then ciphertext metadata
-     * and access grants. No rename or archive operation calls deleteKey.
+     * Permanently deletes a vault. Needs MANAGE. Deletes its DEK first, then secrets, folders and
+     * access grants, and finally the vault itself (folders reference the vault, so they go before it).
      */
     @Transactional
     public void delete(AuthPrincipal principal, UUID id) {
         var resource = new ResourceRef(ResourceType.VAULT, id);
         accessControl.require(principal, resource, AccessLevel.MANAGE);
-        vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        var vault = vaultRepository.findById(id).orElseThrow(() -> new ApiException(ErrorCode.VAULT_NOT_FOUND));
+        requireNotPersonal(vault);
         envelopeEncryption.deleteKey(resource);
         secretRepository.deleteAllByVaultId(id);
+        folderRepository.deleteAllByVaultId(id);
         accessGrantRepository.deleteAllByResource(ResourceType.VAULT, id);
         vaultRepository.deleteById(id);
         log.info("Vault {} permanently deleted by {}", id, principal.userId());
+    }
+
+    /** Every user keeps exactly one personal vault, so it can be neither archived nor deleted. */
+    private static void requireNotPersonal(Vault vault) {
+        if (vault.getType() == VaultType.PERSONAL) {
+            throw new ApiException(ErrorCode.VALIDATION_FAILED);
+        }
     }
 
     private static ResourceRef refOf(Vault vault) {

@@ -17,4 +17,6 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
     boolean existsByVaultIdAndNameIgnoreCase(UUID vaultId, String name);
 
     boolean existsByVaultIdAndNameIgnoreCaseAndIdNot(UUID vaultId, String name, UUID id);
+
+    void deleteAllByVaultId(UUID vaultId);
 }

@@ -78,7 +78,7 @@ public class VaultController {
         return vaultService.createProject(principal, request);
     }
 
-    @Operation(summary = "Rename or update vault metadata", description = "Needs WRITE; an archived vault is read-only.")
+    @Operation(summary = "Rename or update vault metadata", description = "Needs MANAGE; an archived vault is read-only.")
     @PutMapping(path = "/{id}", version = "1")
     @PreAuthorize("isAuthenticated()")
     public VaultResponse update(
@@ -88,7 +88,7 @@ public class VaultController {
         return vaultService.update(principal, id, request);
     }
 
-    @Operation(summary = "Archive a vault", description = "Needs WRITE. The data key is retained.")
+    @Operation(summary = "Archive a vault", description = "Needs MANAGE. The data key is retained.")
     @PutMapping(path = "/{id}/archive", version = "1")
     @PreAuthorize("isAuthenticated()")
     public VaultResponse archive(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable UUID id) {
