@@ -1,5 +1,6 @@
 package com.example.template.secret.dto;
 
+import com.example.template.secret.model.SecretType;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -11,6 +12,7 @@ public record SecretResponse(
         UUID vaultId,
         @Nullable UUID folderId,
         String name,
+        SecretType type,
         @Nullable String description,
         List<String> tags,
         @Nullable Instant expiresAt,
