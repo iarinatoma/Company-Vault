@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { provideTestBackend } from '@app-testing/test-backend';
 import { Folder, Secret } from '@app/secrets/models/secret';
-import { SecretsStore } from './secrets-store';
+import { REVEAL_TIMEOUT_MS, SecretsStore } from './secrets-store';
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 const BASE = '/api/v1/vaults/vault-1/secrets';
@@ -203,5 +203,41 @@ describe('SecretsStore', () => {
     expect(store.filteredItems()).toEqual([]);
     store.setSearchQuery('9876');
     expect(store.filteredItems()).toEqual([]);
+  });
+
+  it('decrypts a value for copying without showing it', async () => {
+    const copied = store.fetchForCopy('secret-1');
+    http.expectOne(`${BASE}/secret-1/value`).flush({ value: 's3cr3t' });
+
+    expect((await copied)?.value).toBe('s3cr3t');
+    expect(store.revealed().has('secret-1')).toBe(false);
+  });
+
+  it('copies nothing when the server forbids revealing', async () => {
+    const copied = store.fetchForCopy('secret-1');
+    http
+      .expectOne(`${BASE}/secret-1/value`)
+      .flush({ code: 'FORBIDDEN' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(await copied).toBeNull();
+    expect(store.saveError()).toBe('You are not allowed to do this.');
+  });
+
+  it('masks a shown value again after the reveal timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      const shown = store.reveal('secret-1');
+      http.expectOne(`${BASE}/secret-1/value`).flush({ value: 's3cr3t' });
+      await shown;
+      expect(store.revealed().has('secret-1')).toBe(true);
+
+      vi.advanceTimersByTime(TestBed.inject(REVEAL_TIMEOUT_MS) - 1);
+      expect(store.revealed().has('secret-1')).toBe(true);
+
+      vi.advanceTimersByTime(1);
+      expect(store.revealed().has('secret-1')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
