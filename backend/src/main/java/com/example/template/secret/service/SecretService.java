@@ -4,11 +4,14 @@ import com.example.template.access.service.AccessControl;
 import com.example.template.folder.repository.FolderRepository;
 import com.example.template.keys.service.EnvelopeEncryption;
 import com.example.template.secret.dto.CreateSecretRequest;
+import com.example.template.secret.dto.CustomField;
 import com.example.template.secret.dto.MoveSecretRequest;
+import com.example.template.secret.dto.SecretFields;
 import com.example.template.secret.dto.SecretResponse;
 import com.example.template.secret.dto.SecretValueResponse;
 import com.example.template.secret.dto.UpdateSecretRequest;
 import com.example.template.secret.model.Secret;
+import com.example.template.secret.model.SecretType;
 import com.example.template.secret.repository.SecretRepository;
 import com.example.template.shared.error.ApiException;
 import com.example.template.shared.error.ErrorCode;
@@ -98,7 +101,8 @@ public class SecretService {
         var vault = requireAccess(principal, vaultId, AccessLevel.READ);
         var secret = find(vaultId, secretId);
         log.info("Secret {} in vault {} revealed by {}", secretId, vaultId, principal.userId());
-        return new SecretValueResponse(envelopeEncryption.decrypt(vault, secret.getEncryptedValue()));
+        String value = envelopeEncryption.decrypt(vault, secret.getEncryptedValue());
+        return new SecretValueResponse(value, decryptFields(vault, secret));
     }
 
     @Transactional
@@ -115,6 +119,10 @@ public class SecretService {
         secret.setTags(serializeTags(request.tags()));
         secret.setExpiresAt(request.expiresAt());
         secret.setEncryptedValue(envelopeEncryption.encrypt(vault, request.value()));
+        SecretType requestedType = request.type();
+        SecretType type = requestedType != null ? requestedType : SecretType.API_KEY;
+        secret.setType(type);
+        secret.setEncryptedFields(encryptFields(vault, type, request.fields()));
         secret.setCreatedBy(principal.userId());
         secret.setUpdatedBy(principal.userId());
         secret = secretRepository.save(secret);
@@ -140,6 +148,14 @@ public class SecretService {
         String value = request.value();
         if (value != null && !value.isBlank()) {
             secret.setEncryptedValue(envelopeEncryption.encrypt(vault, value));
+        }
+        SecretType requestedType = request.type();
+        if (requestedType != null) {
+            secret.setType(requestedType);
+        }
+        SecretFields fields = request.fields();
+        if (fields != null) {
+            secret.setEncryptedFields(encryptFields(vault, secret.getType(), fields));
         }
         secret.setUpdatedBy(principal.userId());
         secret = secretRepository.saveAndFlush(secret);
@@ -185,6 +201,11 @@ public class SecretService {
         String plainValue = envelopeEncryption.decrypt(sourceVaultRef, secret.getEncryptedValue());
         envelopeEncryption.ensureKey(targetVaultRef);
         String reEncryptedValue = envelopeEncryption.encrypt(targetVaultRef, plainValue);
+        String encryptedFields = secret.getEncryptedFields();
+        if (encryptedFields != null) {
+            String plainFields = envelopeEncryption.decrypt(sourceVaultRef, encryptedFields);
+            secret.setEncryptedFields(envelopeEncryption.encrypt(targetVaultRef, plainFields));
+        }
 
         secret.setVaultId(destinationVaultId);
         secret.setFolderId(request.targetFolderId());
@@ -208,6 +229,36 @@ public class SecretService {
         requireWritable(principal, vaultId, AccessLevel.MANAGE);
         secretRepository.delete(find(vaultId, secretId));
         log.info("Secret {} in vault {} deleted by {}", secretId, vaultId, principal.userId());
+    }
+
+    /**
+     * Encrypts the type-specific fields with the vault's data key. Username and URL belong to a
+     * LOGIN only; when nothing is left after that, nothing is stored.
+     */
+    private @Nullable String encryptFields(ResourceRef vault, SecretType type, @Nullable SecretFields fields) {
+        if (fields == null) {
+            return null;
+        }
+        boolean login = type == SecretType.LOGIN;
+        var normalized = new SecretFields(
+                login ? blankToNull(fields.username()) : null,
+                login ? blankToNull(fields.url()) : null,
+                fields.customFields().stream()
+                        .map(field -> new CustomField(field.name().strip(), field.value()))
+                        .toList());
+        if (normalized.username() == null && normalized.url() == null && normalized.customFields().isEmpty()) {
+            return null;
+        }
+        return envelopeEncryption.encrypt(vault, SecretFieldsJson.write(normalized));
+    }
+
+    /** Decrypts the type-specific fields; a secret without any has empty fields. */
+    private SecretFields decryptFields(ResourceRef vault, Secret secret) {
+        String encryptedFields = secret.getEncryptedFields();
+        if (encryptedFields == null) {
+            return SecretFields.EMPTY;
+        }
+        return SecretFieldsJson.read(envelopeEncryption.decrypt(vault, encryptedFields));
     }
 
     private void validateFolderBelongsToVault(UUID vaultId, @Nullable UUID folderId) {
@@ -327,6 +378,7 @@ public class SecretService {
                 secret.getVaultId(),
                 secret.getFolderId(),
                 secret.getName(),
+                secret.getType(),
                 secret.getDescription(),
                 parseTags(secret.getTags()),
                 secret.getExpiresAt(),
