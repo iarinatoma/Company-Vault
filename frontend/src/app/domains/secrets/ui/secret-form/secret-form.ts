@@ -19,6 +19,7 @@ import {
   SecretInput,
   SecretType,
 } from '@app/secrets/models/secret';
+import { PasswordGenerator } from '@app/secrets/ui/password-generator/password-generator';
 import {
   buildSecretFields,
   CustomFieldRow,
@@ -63,11 +64,11 @@ function parseTags(raw: string): string[] {
  * Modal dialog to create (`secret` is null) or edit a secret. Emits the input; the parent saves.
  * The type-specific fields (username, URL, custom fields) are encrypted like the value, so on an
  * edit they can only be changed once the user has shown the secret (`currentFields`); otherwise
- * they are kept as they are.
+ * they are kept as they are. The password generator fills the value field.
  */
 @Component({
   selector: 'app-secret-form',
-  imports: [FormField],
+  imports: [FormField, PasswordGenerator],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './secret-form.html',
 })
@@ -119,6 +120,9 @@ export class SecretForm {
   protected readonly isLogin = computed(() => this.selectedType() === 'LOGIN');
   protected readonly isNote = computed(() => this.selectedType() === 'NOTE');
   protected readonly valueLabel = computed(() => secretValueLabel(this.selectedType()));
+  /** A note is free text; every other type can take a generated password as its value. */
+  protected readonly canGenerate = computed(() => this.selectedType() !== 'NOTE');
+  protected readonly showGenerator = signal(false);
   /** New secrets always; an edited secret only after "Show", so no stored field is lost unseen. */
   protected readonly fieldsEditable = computed(
     () => this.isCreate() || this.currentFields() !== null,
@@ -142,6 +146,14 @@ export class SecretForm {
       const el = this.dialog().nativeElement;
       if (!el.open) el.showModal();
     });
+  }
+
+  protected toggleGenerator(): void {
+    this.showGenerator.update((shown) => !shown);
+  }
+
+  protected useGeneratedPassword(password: string): void {
+    this.model.update((model) => ({ ...model, value: password }));
   }
 
   protected addCustomField(): void {
