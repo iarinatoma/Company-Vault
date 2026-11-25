@@ -2,7 +2,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { APP_CONFIG } from '@app/shared/config/util/app-config';
-import { MoveSecretInput, Secret, SecretFilter, SecretInput } from '@app/secrets/models/secret';
+import {
+  MoveSecretInput,
+  RevealedSecret,
+  Secret,
+  SecretFields,
+  SecretFilter,
+  SecretInput,
+} from '@app/secrets/models/secret';
+import { normalizeFields } from '@app/secrets/util/secret-fields';
 
 /** Thin HTTP layer for `/api/v1/vaults/{vaultId}/secrets`; the backend checks the access level on the vault. */
 @Injectable({ providedIn: 'root' })
@@ -23,11 +31,13 @@ export class SecretsClient {
     return this.http.get<Secret[]>(this.url(vaultId), { params });
   }
 
-  /** The decrypted value, fetched only on an explicit "Show". */
-  reveal(vaultId: string, secretId: string): Observable<string> {
+  /** The decrypted value and type-specific fields, fetched only on an explicit "Show". */
+  reveal(vaultId: string, secretId: string): Observable<RevealedSecret> {
     return this.http
-      .get<{ value: string }>(`${this.url(vaultId)}/${encodeURIComponent(secretId)}/value`)
-      .pipe(map((response) => response.value));
+      .get<{ value: string; fields?: Partial<SecretFields> | null }>(
+        `${this.url(vaultId)}/${encodeURIComponent(secretId)}/value`,
+      )
+      .pipe(map((response) => ({ value: response.value, fields: normalizeFields(response.fields) })));
   }
 
   create(vaultId: string, input: SecretInput): Observable<Secret> {

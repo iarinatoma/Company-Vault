@@ -13,6 +13,7 @@ const SECRET: Secret = {
   vaultId: 'vault-1',
   folderId: null,
   name: 'Database',
+  type: 'API_KEY',
   description: 'Primary DB',
   tags: ['prod', 'db'],
   expiresAt: null,
@@ -76,7 +77,7 @@ describe('SecretsStore', () => {
     const shown = store.reveal('secret-1');
     http.expectOne(`${BASE}/secret-1/value`).flush({ value: 's3cr3t' });
     await shown;
-    expect(store.revealed().get('secret-1')).toBe('s3cr3t');
+    expect(store.revealed().get('secret-1')?.value).toBe('s3cr3t');
 
     store.hide('secret-1');
     expect(store.revealed().has('secret-1')).toBe(false);
@@ -173,9 +174,34 @@ describe('SecretsStore', () => {
     const shown = store.reveal('secret-1');
     http.expectOne(`${BASE}/secret-1/value`).flush({ value: 'top-secret-password-999' });
     await shown;
-    expect(store.revealed().get('secret-1')).toBe('top-secret-password-999');
+    expect(store.revealed().get('secret-1')?.value).toBe('top-secret-password-999');
 
     store.setSearchQuery('top-secret-password-999');
+    expect(store.filteredItems()).toEqual([]);
+  });
+
+  it('keeps the revealed fields with the value and forgets both when hidden', async () => {
+    const fields = { username: 'alice', url: 'https://mail.example.com', customFields: [] };
+    const shown = store.reveal('secret-1');
+    http.expectOne(`${BASE}/secret-1/value`).flush({ value: 'pa55word', fields });
+    await shown;
+    expect(store.revealed().get('secret-1')).toEqual({ value: 'pa55word', fields });
+
+    store.hide('secret-1');
+    expect(store.revealed().has('secret-1')).toBe(false);
+  });
+
+  it('never matches revealed field values when searching', async () => {
+    const shown = store.reveal('secret-1');
+    http.expectOne(`${BASE}/secret-1/value`).flush({
+      value: 'pa55word',
+      fields: { username: 'alice-the-admin', url: null, customFields: [{ name: 'PIN', value: '9876' }] },
+    });
+    await shown;
+
+    store.setSearchQuery('alice-the-admin');
+    expect(store.filteredItems()).toEqual([]);
+    store.setSearchQuery('9876');
     expect(store.filteredItems()).toEqual([]);
   });
 });

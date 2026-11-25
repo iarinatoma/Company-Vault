@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
 import { provideTestBackend } from '@app-testing/test-backend';
+import { EMPTY_FIELDS } from '@app/secrets/models/secret';
 import { SecretsClient } from './secrets-client';
 
 const BASE = '/api/v1/vaults/vault-1/secrets';
@@ -25,7 +26,7 @@ describe('SecretsClient', () => {
     expect(request.request.method).toBe('GET');
     request.flush({ value: 's3cr3t' });
 
-    expect(await value).toBe('s3cr3t');
+    expect(await value).toEqual({ value: 's3cr3t', fields: EMPTY_FIELDS });
   });
 
   it('sends the value only in the request body', async () => {
@@ -52,5 +53,30 @@ describe('SecretsClient', () => {
     expect(del.request.method).toBe('DELETE');
     del.flush(null);
     await deleted;
+  });
+
+  it('reveals the type-specific fields together with the value', async () => {
+    const fields = {
+      username: 'alice',
+      url: 'https://mail.example.com',
+      customFields: [{ name: 'PIN', value: '1234' }],
+    };
+    const revealed = firstValueFrom(client.reveal('vault-1', 'secret-1'));
+    http.expectOne(`${BASE}/secret-1/value`).flush({ value: 'pa55word', fields });
+
+    expect(await revealed).toEqual({ value: 'pa55word', fields });
+  });
+
+  it('sends the type and the fields only in the request body', async () => {
+    const fields = { username: 'alice', url: null, customFields: [] };
+    const created = firstValueFrom(
+      client.create('vault-1', { name: 'Mail', value: 'pa55word', type: 'LOGIN', fields }),
+    );
+    const request = http.expectOne(BASE);
+
+    expect(request.request.url).not.toContain('alice');
+    expect(request.request.body).toEqual({ name: 'Mail', value: 'pa55word', type: 'LOGIN', fields });
+    request.flush({ id: 'secret-1' });
+    await created;
   });
 });
